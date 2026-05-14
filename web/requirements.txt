@@ -1,0 +1,11 @@
+flask==3.1.1
+flask-cors==5.0.1
+SQLAlchemy==2.0.35
+pandas==2.2.3
+openpyxl==3.1.5
+python-docx==1.1.2
+waitress==3.0.2
+beautifulsoup4==4.13.4
+requests==2.32.3
+pdfplumber==0.11.5
+lxml==5.3.2

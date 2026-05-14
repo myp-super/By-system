@@ -11,7 +11,18 @@
       "Bash(python -m py_compile main.py)",
       "Bash(python -m py_compile ui/dashboard.py)",
       "Bash(python -m py_compile ui/kanban.py)",
-      "Bash(python -m py_compile ui/templates.py)"
+      "Bash(python -m py_compile ui/templates.py)",
+      "WebFetch(domain:www.baoyantongzhi.com)",
+      "WebSearch",
+      "Bash(timeout 4 python app.py)",
+      "Bash(timeout 5 python app.py)",
+      "Bash(python app.py)",
+      "Bash(curl -s http://localhost:5000/api/dashboard)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'Dashboard: {d[\\\\\"total\\\\\"]} projects, monthly_iv={d[\\\\\"monthly_interviews\\\\\"]}'\\)\")",
+      "Bash(kill %1)",
+      "Bash(timeout 5 python app.py --prod)",
+      "Bash(python scraper.py)",
+      "Bash(python -c \"import json; d=json.load\\(open\\('C:/Users/Lenovo/Desktop/app/web/data/all_universities.json','r',encoding='utf-8'\\)\\); print\\(f'File has {len\\(d\\)} universities'\\)\")"
     ]
   }
 }
