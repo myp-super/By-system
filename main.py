@@ -1,18 +1,18 @@
 """
-保研全程管理 (Graduate School Application Manager)
-Main entry point — sets up the main window, sidebar navigation, and stacked pages.
+保研全程管理 (Graduate School Application Manager) v2.1
+Vibrant, modern UI with large fonts, searchable dropdowns, drag-and-drop kanban, and file upload.
 """
 import sys
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QStackedWidget, QPushButton, QLabel, QFrame, QSizePolicy,
-    QMessageBox, QAction, QMenuBar, QMenu, QSpacerItem,
+    QMessageBox, QAction,
 )
-from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont
 
-from database import init_db, SessionLocal, get_upcoming_timelines
+from database import init_db, SessionLocal
 from scheduler import ReminderService
 from utils import export_to_excel
 
@@ -26,221 +26,300 @@ from ui.mentors import MentorsPage
 from ui.templates import TemplatesPage
 
 
-# ─── QSS Stylesheet ──────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# Vibrant Premium QSS Theme — Larger Fonts & Richer Colors
+# ═══════════════════════════════════════════════════════════════════════════════
 
 APP_STYLESHEET = """
-/* Global */
-QWidget {
+/* ═══ Global ═══ */
+* {
     font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
-    font-size: 13px;
-    color: #333;
-    background: #F5F7FA;
+    font-size: 16px;
+    color: #1E293B;
 }
 
-/* Main window */
+QWidget {
+    background: transparent;
+}
+
+/* ═══ Main Window Background ═══ */
 QMainWindow {
-    background: #F5F7FA;
+    background: #EFF6FF;
 }
 
-/* Sidebar */
+/* ═══ Sidebar — Rich Dark Gradient ═══ */
 #sidebar {
-    background: #2C3E50;
-    border-right: 1px solid #1a252f;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #1E1B4B, stop:0.4 #312E81, stop:1 #1E1B4B);
+    border-right: none;
+    padding: 0px;
 }
 #sidebar QPushButton {
-    color: #BDC3C7;
+    color: #C7D2FE;
     background: transparent;
     border: none;
     text-align: left;
-    padding: 12px 20px;
-    font-size: 13px;
-    border-left: 3px solid transparent;
+    padding: 14px 28px;
+    font-size: 16px;
+    font-weight: 500;
+    border-left: 4px solid transparent;
+    border-radius: 0px;
+    margin: 2px 0px;
 }
 #sidebar QPushButton:hover {
-    color: white;
-    background: #34495E;
+    color: #ffffff;
+    background: rgba(129, 140, 248, 0.18);
+    border-left: 4px solid rgba(165, 180, 252, 0.6);
 }
 #sidebar QPushButton:checked {
-    color: white;
-    background: #34495E;
-    border-left: 3px solid #4A90D9;
-    font-weight: bold;
+    color: #ffffff;
+    background: rgba(99, 102, 241, 0.30);
+    border-left: 4px solid #818CF8;
+    font-weight: 700;
 }
 #sidebar #sidebarTitle {
-    color: white;
-    font-size: 18px;
-    font-weight: bold;
-    padding: 20px 20px 10px 20px;
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 800;
+    padding: 28px 28px 18px 28px;
     background: transparent;
 }
 
-/* Main content area */
+/* ═══ Content Area ═══ */
 #contentArea {
-    background: #F5F7FA;
+    background: #EFF6FF;
 }
 
-/* QTableWidget */
-QTableWidget {
-    background: white;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    gridline-color: #f0f0f0;
-    selection-background-color: #E3F2FD;
-    selection-color: #333;
-}
-QTableWidget::item {
-    padding: 6px 8px;
-}
-QHeaderView::section {
-    background: #F4F7FC;
-    color: #555;
-    font-weight: bold;
-    padding: 8px;
-    border: none;
-    border-bottom: 2px solid #e0e0e0;
-}
-
-/* QScrollArea */
-QScrollArea {
-    background: transparent;
-    border: none;
-}
-
-/* QScrollBar */
+/* ═══ Scroll Area ═══ */
+QScrollArea { background: transparent; border: none; }
 QScrollBar:vertical {
-    width: 8px;
-    background: transparent;
-    margin: 0;
+    width: 10px; background: transparent; margin: 4px 0;
 }
 QScrollBar::handle:vertical {
-    background: #c0c0c0;
-    border-radius: 4px;
-    min-height: 30px;
+    background: #A5B4FC; border-radius: 5px; min-height: 40px;
 }
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-    height: 0px;
+QScrollBar::handle:vertical:hover { background: #818CF8; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+QScrollBar:horizontal { height: 10px; background: transparent; }
+QScrollBar::handle:horizontal {
+    background: #A5B4FC; border-radius: 5px; min-width: 40px;
 }
+QScrollBar::handle:horizontal:hover { background: #818CF8; }
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
 
-/* QComboBox */
+/* ═══ Table ═══ */
+QTableWidget {
+    background: #ffffff;
+    border: 1px solid #DDD6FE;
+    border-radius: 12px;
+    gridline-color: #F1F5F9;
+    selection-background-color: #EDE9FE;
+    selection-color: #1E293B;
+    font-size: 15px;
+}
+QTableWidget::item { padding: 10px 14px; }
+QHeaderView::section {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F5F3FF, stop:1 #EDE9FE);
+    color: #3730A3;
+    font-weight: 700;
+    font-size: 15px;
+    padding: 12px 14px;
+    border: none;
+    border-bottom: 2px solid #C4B5FD;
+}
+QTableWidget::item:alternate { background: #FAFAFE; }
+
+/* ═══ ComboBox / LineEdit ═══ */
 QComboBox {
-    background: white;
-    border: 1px solid #d0d0d0;
-    border-radius: 4px;
-    padding: 4px 8px;
-    min-width: 80px;
+    background: #ffffff;
+    border: 2px solid #DDD6FE;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 16px;
+    min-width: 100px;
 }
-QComboBox:hover { border-color: #4A90D9; }
-QComboBox::drop-down { border: none; }
+QComboBox:hover { border-color: #818CF8; }
+QComboBox:focus { border-color: #6366F1; background: #F8FAFF; }
+QComboBox::drop-down { border: none; width: 30px; }
+QComboBox QAbstractItemView {
+    background: white; border: 2px solid #C4B5FD; border-radius: 10px;
+    padding: 6px; selection-background-color: #EDE9FE;
+    selection-color: #1E293B; font-size: 16px;
+}
+QComboBox QAbstractItemView::item { padding: 8px 14px; }
 
-/* QLineEdit */
 QLineEdit {
-    background: white;
-    border: 1px solid #d0d0d0;
-    border-radius: 4px;
-    padding: 6px 10px;
+    background: #ffffff; border: 2px solid #DDD6FE;
+    border-radius: 10px; padding: 10px 14px; font-size: 16px;
 }
-QLineEdit:focus { border-color: #4A90D9; }
+QLineEdit:focus { border-color: #6366F1; background: #F8FAFF; }
 
-/* QTextEdit */
 QTextEdit {
-    background: white;
-    border: 1px solid #d0d0d0;
-    border-radius: 4px;
-    padding: 4px;
+    background: #ffffff; border: 2px solid #DDD6FE;
+    border-radius: 10px; padding: 10px 14px; font-size: 16px;
 }
-QTextEdit:focus { border-color: #4A90D9; }
+QTextEdit:focus { border-color: #6366F1; background: #F8FAFF; }
 
-/* QPushButton */
+/* ═══ Buttons ═══ */
 QPushButton {
-    border-radius: 4px;
-    padding: 6px 14px;
+    border-radius: 10px; padding: 10px 22px;
+    font-size: 16px; font-weight: 500;
 }
-QPushButton:hover { opacity: 0.9; }
 
-/* QGroupBox */
+QPushButton[cssClass="primary"] {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #818CF8, stop:1 #6366F1);
+    color: white; border: none;
+}
+QPushButton[cssClass="primary"]:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #6366F1, stop:1 #4F46E5);
+}
+
+QPushButton[cssClass="success"] {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #34D399, stop:1 #10B981);
+    color: white; border: none;
+}
+QPushButton[cssClass="success"]:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #10B981, stop:1 #059669);
+}
+
+QPushButton[cssClass="danger"] {
+    background: #FEE2E2; color: #DC2626;
+    border: 2px solid #FECACA; font-weight: 600;
+}
+QPushButton[cssClass="danger"]:hover {
+    background: #FECACA; color: #B91C1C; border-color: #FCA5A5;
+}
+
+QPushButton[cssClass="warning"] {
+    background: #FEF3C7; color: #D97706;
+    border: 2px solid #FDE68A; font-weight: 600;
+}
+QPushButton[cssClass="warning"]:hover {
+    background: #FDE68A; color: #B45309; border-color: #FCD34D;
+}
+
+QPushButton[cssClass="secondary"] {
+    background: #F1F5F9; color: #475569;
+    border: 2px solid #E2E8F0; font-weight: 500;
+}
+QPushButton[cssClass="secondary"]:hover {
+    background: #E2E8F0; color: #1E293B; border-color: #CBD5E1;
+}
+
+/* ═══ Group Box ═══ */
 QGroupBox {
-    background: white;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    margin-top: 10px;
-    padding-top: 16px;
-    font-weight: bold;
+    background: #ffffff;
+    border: 2px solid #DDD6FE;
+    border-radius: 14px;
+    margin-top: 16px;
+    padding: 24px 18px 18px 18px;
+    font-weight: 700;
+    font-size: 17px;
 }
 QGroupBox::title {
-    subcontrol-origin: margin;
-    left: 12px;
-    padding: 0 6px;
-    color: #333;
+    subcontrol-origin: margin; left: 18px;
+    padding: 0 10px; color: #3730A3;
 }
 
-/* QListWidget */
+/* ═══ List Widget ═══ */
 QListWidget {
-    background: white;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    padding: 4px;
+    background: #ffffff; border: 2px solid #DDD6FE;
+    border-radius: 10px; padding: 6px; font-size: 16px;
 }
 QListWidget::item {
-    padding: 6px 8px;
-    border-bottom: 1px solid #f5f5f5;
+    padding: 10px 14px; border-bottom: 1px solid #F1F5F9; border-radius: 6px;
 }
-QListWidget::item:alternate {
-    background: #F9FAFB;
-}
+QListWidget::item:hover { background: #EEF2FF; }
+QListWidget::item:selected { background: #E0E7FF; color: #1E293B; }
+QListWidget::item:alternate { background: #F8FAFC; }
 
-/* QProgressBar */
+/* ═══ Progress Bar ═══ */
 QProgressBar {
-    background: #e0e0e0;
-    border: none;
-    border-radius: 6px;
-    height: 18px;
-    text-align: center;
-    font-weight: bold;
+    background: #E2E8F0; border: none; border-radius: 12px;
+    height: 26px; text-align: center; font-weight: 700;
+    font-size: 13px; color: #ffffff;
 }
 QProgressBar::chunk {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-        stop:0 #4A90D9, stop:1 #7ED321);
-    border-radius: 6px;
+        stop:0 #6366F1, stop:0.4 #8B5CF6, stop:0.7 #A78BFA, stop:1 #10B981);
+    border-radius: 12px;
 }
 
-/* QToolTip */
+/* ═══ Tooltips ═══ */
 QToolTip {
-    background: #333;
-    color: white;
-    border: none;
-    padding: 6px;
+    background: #1E1B4B; color: #E0E7FF;
+    border: none; padding: 10px 14px; border-radius: 8px; font-size: 14px;
 }
+
+/* ═══ Menu Bar ═══ */
+QMenuBar {
+    background: #ffffff; border-bottom: 2px solid #EDE9FE;
+    padding: 4px 10px; font-size: 16px;
+}
+QMenuBar::item { padding: 8px 16px; border-radius: 8px; }
+QMenuBar::item:selected { background: #F5F3FF; color: #4F46E5; }
+
+QMenu {
+    background: #ffffff; border: 2px solid #DDD6FE;
+    border-radius: 12px; padding: 8px;
+}
+QMenu::item {
+    padding: 10px 36px 10px 20px; border-radius: 8px; font-size: 15px;
+}
+QMenu::item:selected { background: #F5F3FF; color: #4F46E5; }
+QMenu::separator { height: 1px; background: #E2E8F0; margin: 6px 10px; }
+
+/* ═══ Dialog ═══ */
+QDialog { background: #F5F3FF; }
+
+/* ═══ Date Edit ═══ */
+QDateEdit {
+    background: #ffffff; border: 2px solid #DDD6FE;
+    border-radius: 10px; padding: 10px 14px; font-size: 16px;
+}
+QDateEdit:focus { border-color: #6366F1; }
+QDateEdit::drop-down { border: none; width: 30px; }
+
+/* ═══ SpinBox ═══ */
+QSpinBox {
+    background: #ffffff; border: 2px solid #DDD6FE;
+    border-radius: 10px; padding: 10px 14px; font-size: 16px;
+}
+QSpinBox:focus { border-color: #6366F1; }
+
+/* ═══ Message Box ═══ */
+QMessageBox { background: #ffffff; }
+QMessageBox QPushButton { padding: 10px 28px; border-radius: 10px; font-size: 15px; }
 """
 
-
-# ─── Navigation Items ────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# Navigation
+# ═══════════════════════════════════════════════════════════════════════════════
 
 NAV_ITEMS = [
-    ("首页仪表盘", "dashboard"),
-    ("院校项目库", "project_list"),
-    ("申请进度看板", "kanban"),
-    ("时间节点", "timeline"),
-    ("材料管理", "materials"),
-    ("面试记录", "interviews"),
-    ("导师联系", "mentors"),
-    ("文书模板库", "templates"),
+    ("🏠   首页仪表盘",   "dashboard"),
+    ("🎓   院校项目库",   "project_list"),
+    ("📋   申请进度看板", "kanban"),
+    ("📅   时间节点",     "timeline"),
+    ("📁   材料管理",     "materials"),
+    ("💬   面试记录",     "interviews"),
+    ("👨‍🏫   导师联系",   "mentors"),
+    ("📝   文书模板库",   "templates"),
 ]
 
 
 class MainWindow(QMainWindow):
-    """Main application window."""
+    """Premium main application window."""
 
     def __init__(self):
         super().__init__()
         self.setWindowTitle("保研全程管理")
-        self.setMinimumSize(1200, 780)
-        self.resize(1360, 860)
+        self.setMinimumSize(1320, 840)
+        self.resize(1480, 940)
 
         self._setup_menu_bar()
         self._setup_ui()
-        self._connect_nav()
 
-        # Start reminder service
         self.reminder = ReminderService(interval_minutes=30)
         self.reminder.worker.reminders_found.connect(self._on_reminders)
         self.reminder.start()
@@ -248,40 +327,40 @@ class MainWindow(QMainWindow):
     def _setup_menu_bar(self):
         menubar = self.menuBar()
 
-        # File menu
         file_menu = menubar.addMenu("文件(&F)")
-        export_action = QAction("导出全部数据为 Excel", self)
-        export_action.triggered.connect(self._export_data)
-        file_menu.addAction(export_action)
+        export_act = QAction("📊  导出全部数据为 Excel", self)
+        export_act.triggered.connect(self._export_data)
+        file_menu.addAction(export_act)
         file_menu.addSeparator()
-        exit_action = QAction("退出(&Q)", self)
-        exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
+        exit_act = QAction("退出(&Q)", self)
+        exit_act.triggered.connect(self.close)
+        file_menu.addAction(exit_act)
 
-        # View menu
         view_menu = menubar.addMenu("视图(&V)")
-        self.view_actions = []
         for label, key in NAV_ITEMS:
             action = QAction(label, self)
             action.setData(key)
             action.triggered.connect(lambda checked, k=key: self._navigate_to(k))
             view_menu.addAction(action)
-            self.view_actions.append(action)
 
-        # Help menu
         help_menu = menubar.addMenu("帮助(&H)")
-        about_action = QAction("关于", self)
-        about_action.triggered.connect(
-            lambda: QMessageBox.about(
-                self, "关于",
-                "保研全程管理 v1.0\n\n"
-                "帮助你高效管理保研申请全过程:\n"
-                "- 院校项目追踪\n- 申请进度看板\n- 时间节点提醒\n"
-                "- 材料清单管理\n- 面试/导师记录\n- 文书模板库\n\n"
-                "数据存储位置: ~/baoyan_data/data.db"
-            )
+        about_act = QAction("关于", self)
+        about_act.triggered.connect(self._show_about)
+        help_menu.addAction(about_act)
+
+    def _show_about(self):
+        QMessageBox.about(
+            self, "关于 保研全程管理",
+            "保研全程管理  v2.1\n\n"
+            "帮助你高效管理保研申请全过程。\n\n"
+            "功能亮点:\n"
+            "  🎯  148所高校智能搜索\n"
+            "  📋  拖拽式看板管理\n"
+            "  📂  文件拖拽上传\n"
+            "  ⏰  桌面定时提醒\n"
+            "  📊  一键导出Excel\n\n"
+            "数据位置: ~/baoyan_data/data.db"
         )
-        help_menu.addAction(about_action)
 
     def _setup_ui(self):
         central = QWidget()
@@ -293,23 +372,20 @@ class MainWindow(QMainWindow):
         # ── Sidebar ──────────────────────────────────────────────────
         sidebar = QFrame()
         sidebar.setObjectName("sidebar")
-        sidebar.setFixedWidth(200)
-        sidebar.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        sidebar.setFixedWidth(240)
 
         sb_layout = QVBoxLayout(sidebar)
         sb_layout.setContentsMargins(0, 0, 0, 0)
-        sb_layout.setSpacing(0)
+        sb_layout.setSpacing(3)
 
-        title = QLabel("保研管理")
+        title = QLabel("  保研管理")
         title.setObjectName("sidebarTitle")
-        title.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         sb_layout.addWidget(title)
-
-        sb_layout.addSpacing(12)
+        sb_layout.addSpacing(20)
 
         self.nav_buttons: dict[str, QPushButton] = {}
         for label, key in NAV_ITEMS:
-            btn = QPushButton(f"  {label}")
+            btn = QPushButton(label)
             btn.setCheckable(True)
             btn.setCursor(Qt.PointingHandCursor)
             btn.clicked.connect(lambda checked, k=key: self._navigate_to(k))
@@ -318,88 +394,68 @@ class MainWindow(QMainWindow):
 
         sb_layout.addStretch()
 
-        # Version label at bottom
-        ver = QLabel("v1.0")
-        ver.setStyleSheet("color: #7F8C8D; font-size: 11px; padding: 12px 20px; background: transparent;")
+        ver = QLabel("  v2.1")
+        ver.setStyleSheet(
+            "color: #818CF8; font-size: 13px; font-weight: 500; "
+            "padding: 14px 28px; background: transparent;"
+        )
         sb_layout.addWidget(ver)
 
         main_layout.addWidget(sidebar)
 
-        # ── Content Area ──────────────────────────────────────────────
-        content_frame = QFrame()
-        content_frame.setObjectName("contentArea")
-        content_layout = QVBoxLayout(content_frame)
+        # ── Content ──────────────────────────────────────────────────
+        content = QFrame()
+        content.setObjectName("contentArea")
+        content_layout = QVBoxLayout(content)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(0)
 
         self.stack = QStackedWidget()
-        self.pages: dict[str, QWidget] = {}
-
-        # Create all pages
-        self.pages["dashboard"] = DashboardPage()
-        self.pages["project_list"] = ProjectListPage()
-        self.pages["kanban"] = KanbanPage()
-        self.pages["timeline"] = TimelinePage()
-        self.pages["materials"] = MaterialsPage()
-        self.pages["interviews"] = InterviewsPage()
-        self.pages["mentors"] = MentorsPage()
-        self.pages["templates"] = TemplatesPage()
-
-        for key, page in self.pages.items():
+        self.pages: dict[str, QWidget] = {
+            "dashboard":    DashboardPage(),
+            "project_list": ProjectListPage(),
+            "kanban":       KanbanPage(),
+            "timeline":     TimelinePage(),
+            "materials":    MaterialsPage(),
+            "interviews":   InterviewsPage(),
+            "mentors":      MentorsPage(),
+            "templates":    TemplatesPage(),
+        }
+        for page in self.pages.values():
             self.stack.addWidget(page)
-
         content_layout.addWidget(self.stack)
-        main_layout.addWidget(content_frame, 1)
+        main_layout.addWidget(content, 1)
 
-        # Default to dashboard
         self._navigate_to("dashboard")
 
-    def _connect_nav(self):
-        """Navigation is connected via button clicks above."""
-
     def _navigate_to(self, key: str):
-        """Switch to the page identified by key."""
         if key in self.pages:
             self.stack.setCurrentWidget(self.pages[key])
-            # Update button checked states
             for k, btn in self.nav_buttons.items():
                 btn.setChecked(k == key)
-            # Refresh the page
             page = self.pages[key]
             if hasattr(page, "refresh"):
                 page.refresh()
 
     def _export_data(self):
-        """Trigger Excel export."""
         export_to_excel(SessionLocal)
 
     def _on_reminders(self, upcoming):
-        """Handle reminder notifications from background worker."""
-        # The worker already sends desktop notifications.
-        # We can also refresh the dashboard if visible.
         pass
 
     def closeEvent(self, event):
-        """Clean up on close."""
         self.reminder.stop()
         event.accept()
 
 
 def main():
-    """Application entry point."""
-    # Initialize database
     init_db()
-
-    # Create Qt application
     app = QApplication(sys.argv)
     app.setStyleSheet(APP_STYLESHEET)
     app.setApplicationName("保研全程管理")
     app.setOrganizationName("BaoyanManager")
-
-    # Create and show main window
     window = MainWindow()
     window.show()
-
     sys.exit(app.exec_())
 
 

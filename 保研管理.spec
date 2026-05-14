@@ -3,7 +3,7 @@ from PyInstaller.utils.hooks import collect_all
 
 datas = [('C:\\Users\\Lenovo\\Desktop\\app\\ui', 'ui')]
 binaries = []
-hiddenimports = ['sqlalchemy.ext.declarative', 'plyer.platforms.win.notification', 'openpyxl', 'pandas']
+hiddenimports = ['sqlalchemy.ext.declarative', 'plyer.platforms.win.notification', 'openpyxl', 'pandas', 'docx']
 tmp_ret = collect_all('plyer')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 

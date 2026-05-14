@@ -1,27 +1,24 @@
 """
-Build script for packaging the application with PyInstaller.
-Run this script to generate a standalone executable.
+Build script — packages the app into a standalone .exe with PyInstaller.
 
 Usage:
-    python build.py          # Build for current platform
-    python build.py --clean  # Clean build (remove build/dist first)
+    python build.py           # Build
+    python build.py --clean   # Clean + rebuild
 
 Output:
-    dist/保研管理.exe   (Windows)
-    dist/保研管理       (macOS/Linux)
+    dist/保研管理.exe  (Windows)
+    dist/保研管理      (macOS)
 """
 import sys
 import shutil
 from pathlib import Path
 
-# Fix Unicode output on Windows
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-PROJECT_ROOT = Path(__file__).parent
+PROJECT_ROOT = Path(__file__).parent.resolve()
 DIST_DIR = PROJECT_ROOT / "dist"
 BUILD_DIR = PROJECT_ROOT / "build"
-SPEC_FILE = PROJECT_ROOT / "保研管理.spec"
 APP_NAME = "保研管理"
 
 
@@ -30,56 +27,62 @@ def clean():
     for d in (DIST_DIR, BUILD_DIR):
         if d.exists():
             shutil.rmtree(d)
-    if SPEC_FILE.exists():
-        SPEC_FILE.unlink()
-    print("[✓] Cleaned build artifacts.")
+    for spec in PROJECT_ROOT.glob("*.spec"):
+        spec.unlink()
+    print("[✓] Build artifacts cleaned.")
 
 
 def build():
-    """Run PyInstaller to create standalone executable."""
+    """Run PyInstaller to create a standalone executable."""
     try:
-        import PyInstaller.__main__ as pyi
+        from PyInstaller.__main__ import run as pyi_run
     except ImportError:
-        print("请先安装 PyInstaller: pip install pyinstaller")
+        print("ERROR: PyInstaller not installed. Run: pip install pyinstaller")
         sys.exit(1)
 
-    # Determine entry point
     main_script = PROJECT_ROOT / "main.py"
     if not main_script.exists():
-        print(f"错误: 找不到入口文件 {main_script}")
+        print(f"ERROR: {main_script} not found")
         sys.exit(1)
 
-    # Common PyInstaller arguments
+    print(f"[→] Building {APP_NAME} into single executable...")
+    print(f"    Script : {main_script}")
+    print(f"    Output : {DIST_DIR / APP_NAME}.exe" if sys.platform == "win32"
+          else f"    Output : {DIST_DIR / APP_NAME}")
+
+    # Build args with proper path separators
+    sep = ";" if sys.platform == "win32" else ":"
+    ui_dir = str(PROJECT_ROOT / "ui")
+
     args = [
         str(main_script),
         "--name", APP_NAME,
-        "--onefile",                # Single executable
-        "--windowed",               # No console window (GUI app)
+        "--onefile",
+        "--windowed",
         "--clean",
-        "--add-data", f"{PROJECT_ROOT / 'ui'}{';' if sys.platform == 'win32' else ':'}ui",
+        "--add-data", f"{ui_dir}{sep}ui",
         "--hidden-import", "sqlalchemy.ext.declarative",
         "--hidden-import", "plyer.platforms.win.notification",
         "--hidden-import", "openpyxl",
         "--hidden-import", "pandas",
+        "--hidden-import", "docx",
         "--collect-all", "plyer",
+        "--noconfirm",
     ]
 
-    # Platform-specific settings
     if sys.platform == "win32":
-        args.append("--icon=NONE")  # Replace with .ico path if you have one
+        args.append("--icon=NONE")
     elif sys.platform == "darwin":
-        args.append("--icon=NONE")  # Replace with .icns path if you have one
+        args.append("--icon=NONE")
 
-    print(f"[→] Building {APP_NAME} as single executable...")
-    print(f"    Entry: {main_script}")
-    print(f"    Output: {DIST_DIR / APP_NAME}")
-
-    pyi.run(args)
+    pyi_run(args)
 
     print(f"\n[✓] Build complete!")
-    print(f"    Executable: {DIST_DIR / APP_NAME}.exe" if sys.platform == "win32"
-          else f"    Executable: {DIST_DIR / APP_NAME}")
-    print(f"    Data: {DIST_DIR}")
+    dest = DIST_DIR / (APP_NAME + (".exe" if sys.platform == "win32" else ""))
+    if dest.exists():
+        print(f"    → {dest}")
+    else:
+        print(f"    (Check {DIST_DIR} for output)")
 
 
 if __name__ == "__main__":
