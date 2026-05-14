@@ -2,7 +2,7 @@
 保研全程管理 Web v3.0 — Flask Backend
 Features: 信息广场爬虫 · 硕士专业查询 · PDF/Excel解析 · 生产级部署
 """
-import sys, os, io, re, threading
+import sys, os, io, re, threading, json, uuid
 from pathlib import Path
 from datetime import date, datetime, timedelta
 from werkzeug.utils import secure_filename
@@ -85,7 +85,11 @@ class Template(Base):
     __tablename__ = "templates"
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String(200), default=""); category = Column(String(50), default="个人陈述")
-    content = Column(Text, default=""); created_at = Column(DateTime, default=datetime.now)
+    content = Column(Text, default="")
+    file_path = Column(String(500), default="")       # stored file path on disk
+    original_filename = Column(String(300), default="")  # original upload filename
+    file_size = Column(Integer, default=0)            # file size in bytes
+    created_at = Column(DateTime, default=datetime.now)
 
 class SummerCamp(Base):
     """夏令营/预推免/九推信息"""
@@ -219,8 +223,49 @@ if not ALL_SCHOOLS:
 @app.route('/api/universities/search')
 def search_universities():
     q = request.args.get('q','').strip().lower()
-    results = [s for s in ALL_SCHOOLS if not q or q in s.lower()][:30]
+    from data.university_details import DISCIPLINE_RATINGS
+
+    if not q:
+        # Show schools with 学科评估 data first
+        with_data = [s for s in ALL_SCHOOLS if s in DISCIPLINE_RATINGS]
+        without = [s for s in ALL_SCHOOLS if s not in DISCIPLINE_RATINGS]
+        results = (with_data + without)[:50]
+    else:
+        exact = [s for s in ALL_SCHOOLS if s == q]
+        starts = [s for s in ALL_SCHOOLS if s.lower().startswith(q) and s not in exact]
+        contains = [s for s in ALL_SCHOOLS if q in s.lower() and s not in exact and s not in starts]
+        # Prefer schools with rating data
+        for lst in [exact, starts, contains]:
+            lst.sort(key=lambda s: s not in DISCIPLINE_RATINGS)
+        results = (exact + starts + contains)[:30]
     return jsonify(results)
+
+@app.route('/api/university/<name>')
+def university_detail(name):
+    """Get university details: 学科评估 tags website city type."""
+    from data.university_details import DISCIPLINE_RATINGS
+    info = DISCIPLINE_RATINGS.get(name)
+    if not info:
+        for key in DISCIPLINE_RATINGS:
+            if key in name or name in key:
+                info = DISCIPLINE_RATINGS[key]; name = key
+                break
+    if not info:
+        # Return basic info for any school
+        return jsonify({"name": name, "tags": [], "website": "", "city": "",
+                        "type": "", "ratings": {}, "program_count": 0,
+                        "note": "暂无学科评估数据，为基础信息"})
+
+    session = SessionLocal()
+    try:
+        pc = session.query(GraduateProgram).filter(GraduateProgram.school.like(f"%{name}%")).count()
+    finally:
+        session.close()
+
+    return jsonify({"name": name, "tags": info.get("tags",[]),
+                    "website": info.get("website",""), "city": info.get("city",""),
+                    "type": info.get("type",""), "ratings": info.get("ratings",{}),
+                    "program_count": pc})
 
 @app.route('/api/majors')
 def get_majors():
@@ -559,9 +604,13 @@ def get_templates():
     if cat: q = q.filter(Template.category==cat)
     templates = q.order_by(Template.created_at.desc()).all()
     session.close()
-    result = [dict(id=t.id,title=t.title,category=t.category,content=t.content[:200],
-                   full_content=t.content) for t in templates]
-    if kw: result = [t for t in result if kw in t['title'].lower() or kw in t['full_content'].lower()]
+    result = [dict(id=t.id, title=t.title, category=t.category,
+                   content=t.content[:200] if t.content else '',
+                   full_content=t.content if t.content else '',
+                   file_path=t.file_path, original_filename=t.original_filename,
+                   file_size=t.file_size, has_file=bool(t.file_path))
+              for t in templates]
+    if kw: result = [t for t in result if kw in t['title'].lower() or kw in t.get('full_content','').lower()]
     return jsonify(result)
 
 @app.route('/api/templates', methods=['POST'])
@@ -636,33 +685,69 @@ def _parse_docx(file_bytes):
 
 @app.route('/api/templates/upload', methods=['POST'])
 def upload_template_file():
+    """Upload a file and store it on disk (original format preserved)."""
     if 'file' not in request.files:
-        return jsonify(dict(error="No file")),400
+        return jsonify(dict(error="未选择文件")), 400
     file = request.files['file']
     if not file.filename:
-        return jsonify(dict(error="No file")),400
+        return jsonify(dict(error="文件名为空")), 400
 
     filename = secure_filename(file.filename)
+    original_name = file.filename
     ext = os.path.splitext(filename)[1].lower()
+
+    # Generate unique storage name to avoid collisions
+    stored_name = f"{uuid.uuid4().hex}{ext}"
+    upload_dir = DB_DIR / "uploads"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    stored_path = upload_dir / stored_name
+
     file_bytes = file.read()
-    content = ""
+    file_size = len(file_bytes)
 
-    if ext in ('.txt','.md'):
-        content = file_bytes.decode('utf-8', errors='replace')
-    elif ext in ('.docx','.doc'):
-        content = _parse_docx(file_bytes)
-    elif ext == '.pdf':
-        content = _parse_pdf(file_bytes)
-    elif ext in ('.xlsx','.xls'):
-        content = _parse_excel(file_bytes)
-    else:
-        return jsonify(dict(error=f"不支持的文件格式: {ext}")),400
+    with open(stored_path, 'wb') as f:
+        f.write(file_bytes)
 
-    if not content:
-        return jsonify(dict(error="无法解析文件内容")),400
+    # Save to DB
+    session = SessionLocal()
+    try:
+        t = Template(
+            title=original_name,
+            category=request.form.get('category', '其他'),
+            content='',  # not extracting text
+            file_path=str(stored_path),
+            original_filename=original_name,
+            file_size=file_size,
+        )
+        session.add(t)
+        session.commit()
+        tid = t.id
+    finally:
+        session.close()
 
-    title = os.path.splitext(filename)[0]
-    return jsonify(dict(title=title,content=content,filename=filename,size=len(content)))
+    return jsonify(dict(id=tid, title=original_name, file_size=file_size, ext=ext))
+
+@app.route('/api/templates/<int:tid>/download')
+def download_template(tid):
+    """Download the original uploaded file."""
+    session = SessionLocal()
+    try:
+        t = session.query(Template).filter_by(id=tid).first()
+        if not t or not t.file_path:
+            return jsonify(dict(error="文件不存在")), 404
+
+        file_path = Path(t.file_path)
+        if not file_path.exists():
+            return jsonify(dict(error="文件已被删除")), 404
+
+        return send_file(
+            str(file_path),
+            as_attachment=True,
+            download_name=t.original_filename or t.title,
+            mimetype='application/octet-stream'
+        )
+    finally:
+        session.close()
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Summer Camp Hub (信息广场)

@@ -22,7 +22,14 @@
       "Bash(kill %1)",
       "Bash(timeout 5 python app.py --prod)",
       "Bash(python scraper.py)",
-      "Bash(python -c \"import json; d=json.load\\(open\\('C:/Users/Lenovo/Desktop/app/web/data/all_universities.json','r',encoding='utf-8'\\)\\); print\\(f'File has {len\\(d\\)} universities'\\)\")"
+      "Bash(python -c \"import json; d=json.load\\(open\\('C:/Users/Lenovo/Desktop/app/web/data/all_universities.json','r',encoding='utf-8'\\)\\); print\\(f'File has {len\\(d\\)} universities'\\)\")",
+      "Bash(python)",
+      "Bash(python -c \"from app import app; print\\('App imports OK'\\); print\\(f'Routes: {len\\(app.url_map._rules\\)}'\\)\")",
+      "Bash(git checkout *)",
+      "Bash(python -c \"from app import app; print\\(f'OK: {len\\(app.url_map._rules\\)} routes'\\); print\\(f'Unis loaded: {len\\(app.ALL_SCHOOLS\\) if hasattr\\(app,\\\\\"ALL_SCHOOLS\\\\\"\\) else \\\\\"check\\\\\"}'\\)\")",
+      "Bash(python data/expand_programs.py)",
+      "Bash(python3 *)",
+      "Bash(timeout 5 python run.py)"
     ]
   }
 }

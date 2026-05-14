@@ -1,239 +1,87 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>保研全程管理 v3.0</title>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>保研全程管理 v4</title>
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
 <div id="app">
-
-<!-- ═══ Sidebar ═══════════════════════════════════════════════════════ -->
 <aside class="sidebar">
   <div class="sidebar-logo" onclick="navigateTo('dashboard')" style="cursor:pointer">🎓 <span>保研管理</span></div>
   <nav class="sidebar-nav" id="sidebarNav">
-    <a class="nav-item active" data-page="dashboard" href="javascript:void(0)">
-      <span class="nav-icon">🏠</span> 首页仪表盘
-    </a>
-    <a class="nav-item" data-page="news" href="javascript:void(0)">
-      <span class="nav-icon">📡</span> 保研信息广场
-    </a>
-    <a class="nav-item" data-page="programs" href="javascript:void(0)">
-      <span class="nav-icon">🔬</span> 硕士专业查询
-    </a>
-    <a class="nav-item" data-page="kanban" href="javascript:void(0)">
-      <span class="nav-icon">📋</span> 申请进度看板
-    </a>
-    <a class="nav-item" data-page="projects" href="javascript:void(0)">
-      <span class="nav-icon">🎯</span> 我的项目库
-    </a>
-    <a class="nav-item" data-page="timeline" href="javascript:void(0)">
-      <span class="nav-icon">📅</span> 时间节点
-    </a>
-    <a class="nav-item" data-page="materials" href="javascript:void(0)">
-      <span class="nav-icon">📁</span> 材料管理
-    </a>
-    <a class="nav-item" data-page="interviews" href="javascript:void(0)">
-      <span class="nav-icon">💬</span> 面试记录
-    </a>
-    <a class="nav-item" data-page="mentors" href="javascript:void(0)">
-      <span class="nav-icon">👨‍🏫</span> 导师联系
-    </a>
-    <a class="nav-item" data-page="templates" href="javascript:void(0)">
-      <span class="nav-icon">📝</span> 文书模板库
-    </a>
+    <a class="nav-item active" data-page="dashboard" href="javascript:void(0)"><span class="nav-icon">&#9679;</span>首页仪表盘</a>
+    <a class="nav-item" data-page="programs" href="javascript:void(0)"><span class="nav-icon">&#9679;</span>硕士专业查询</a>
+    <a class="nav-item" data-page="kanban" href="javascript:void(0)"><span class="nav-icon">&#9679;</span>申请进度看板</a>
+    <a class="nav-item" data-page="projects" href="javascript:void(0)"><span class="nav-icon">&#9679;</span>我的项目库</a>
+    <a class="nav-item" data-page="timeline" href="javascript:void(0)"><span class="nav-icon">&#9679;</span>时间节点</a>
+    <a class="nav-item" data-page="materials" href="javascript:void(0)"><span class="nav-icon">&#9679;</span>材料管理</a>
+    <a class="nav-item" data-page="interviews" href="javascript:void(0)"><span class="nav-icon">&#9679;</span>面试记录</a>
+    <a class="nav-item" data-page="mentors" href="javascript:void(0)"><span class="nav-icon">&#9679;</span>导师联系</a>
+    <a class="nav-item" data-page="templates" href="javascript:void(0)"><span class="nav-icon">&#9679;</span>文书模板库</a>
   </nav>
-  <div class="sidebar-footer">v3.0 · 保研全程管理</div>
+  <div class="sidebar-footer">v4 · Enterprise</div>
 </aside>
 
-<!-- ═══ Main Content ═════════════════════════════════════════════════ -->
 <main class="main-content">
-
-  <!-- ══ Dashboard ══════════════════════════════════════════════════ -->
+  <!-- Dashboard -->
   <div class="page active" id="page-dashboard">
-    <div class="page-header">
-      <div><div class="page-title">👋 保研全程驾驶舱</div><div class="page-subtitle" id="dashboardDate"></div></div>
-      <button class="btn btn-primary" onclick="refreshDashboard()">🔄 刷新</button>
-    </div>
+    <div class="page-header"><div><div class="page-title">👋 保研驾驶舱</div><div class="page-subtitle" id="dashboardDate"></div></div><button class="btn btn-primary" onclick="refreshDashboard()">🔄 刷新</button></div>
     <div class="stats-grid" id="statCards"></div>
-    <div class="dashboard-row">
-      <div class="card"><h3 style="margin-bottom:14px">⏰ 即将截止（3天）</h3><div id="deadlineList"></div></div>
-      <div class="card"><h3 style="margin-bottom:14px">📡 最新夏令营</h3><div id="latestCamps"></div></div>
-    </div>
-    <div class="dashboard-row">
-      <div class="card"><h3 style="margin-bottom:14px">✉️ 待跟进导师</h3><div id="followupList"></div></div>
-      <div class="card"><h3 style="margin-bottom:14px">📌 最近项目</h3><div id="recentProjects"></div></div>
-    </div>
+    <div class="dashboard-row"><div class="card"><h3 style="font-size:14px;font-weight:600;margin-bottom:12px">⏰ 即将截止（3天内）</h3><div id="deadlineList"></div></div><div class="card"><h3 style="font-size:14px;font-weight:600;margin-bottom:12px">✉️ 待跟进导师</h3><div id="followupList"></div></div></div>
+    <div class="card"><h3 style="font-size:14px;font-weight:600;margin-bottom:12px">📌 最近项目</h3><div id="recentProjects"></div></div>
   </div>
 
-  <!-- ══ 保研信息广场 ═══════════════════════════════════════════════ -->
-  <div class="page" id="page-news">
-    <div class="page-header">
-      <div><div class="page-title">📡 保研信息广场</div><div class="page-subtitle">夏令营 / 预推免 / 九推信息实时汇总</div></div>
-      <div style="display:flex;gap:10px">
-        <button class="btn btn-warning" onclick="showScrapeModal()">🌐 采集信息</button>
-        <button class="btn btn-success" onclick="showCampModal()">＋ 手动添加</button>
-      </div>
-    </div>
-    <div class="filter-bar">
-      <input class="search-input" id="campSearch" placeholder="🔍 搜索院校/标题..." oninput="loadCamps()">
-      <select class="select-input" id="campTypeFilter" onchange="loadCamps()">
-        <option value="">全部类型</option><option>夏令营</option><option>预推免</option><option>九推</option>
-      </select>
-      <select class="select-input" id="campDisciplineFilter" onchange="loadCamps()">
-        <option value="">全部学科</option><option>理科</option><option>工科</option><option>经管</option>
-        <option>文科</option><option>医学</option><option>艺术</option><option>农学</option>
-      </select>
-    </div>
-    <div id="campsGrid" class="camps-grid"></div>
-  </div>
-
-  <!-- ══ 硕士专业查询 ═══════════════════════════════════════════════ -->
+  <!-- Programs -->
   <div class="page" id="page-programs">
-    <div class="page-header">
-      <div><div class="page-title">🔬 硕士专业查询</div><div class="page-subtitle">搜索各高校硕士专业、研究方向、考试科目</div></div>
-      <button class="btn btn-success" onclick="showProgramModal()">＋ 添加专业</button>
+    <div class="page-header"><div><div class="page-title">🔬 硕士专业查询</div><div class="page-subtitle">官方实时数据 + 本地辅助查询</div></div><div style="display:flex;gap:10px"><a href="https://yz.chsi.com.cn/zsml/" target="_blank" class="btn btn-primary" style="font-size:16px;padding:12px 24px">🔗 打开研招网硕士专业目录（新窗口）</a><button class="btn btn-success" onclick="showProgramModal()">＋ 添加专业</button></div></div>
+    <div class="card" style="margin-bottom:16px;background:var(--primary-bg);border-color:var(--primary-border);padding:14px 18px">
+      <strong>💡 推荐：</strong>点击上方按钮直接使用<strong>中国研究生招生信息网</strong>官方硕士专业目录，数据最全最权威。<br>
+      <span style="font-size:13px;color:var(--text-secondary)">下方为本地已收录的参考数据，可用于快速检索已收集的专业信息。</span>
     </div>
     <div class="filter-bar">
-      <div class="search-wrapper" style="flex:1;max-width:280px">
-        <input class="search-input" id="programSchoolSearch" placeholder="院校名称..." autocomplete="off" oninput="loadPrograms()">
-        <div class="search-results" id="programSchoolResults"></div>
-      </div>
-      <input class="search-input" id="programMajorSearch" placeholder="专业/方向..." oninput="loadPrograms()" style="flex:1;max-width:280px">
-      <select class="select-input" id="programDegreeFilter" onchange="loadPrograms()">
-        <option value="">全部学位</option><option>学硕</option><option>专硕</option><option>直博</option>
-      </select>
+      <div class="search-wrapper" style="flex:1;max-width:280px"><input class="search-input" id="programSchoolSearch" placeholder="搜索院校..." autocomplete="off" oninput="searchSchool()"><div class="search-results" id="programSchoolResults"></div></div>
+      <input class="search-input" id="programMajorSearch" placeholder="专业/方向关键字..." oninput="loadPrograms()" style="flex:1;max-width:280px">
+      <select class="select-input" id="programDegreeFilter" onchange="loadPrograms()"><option value="">全部学位</option><option>学硕</option><option>专硕</option><option>直博</option></select>
+      <button class="btn btn-secondary" onclick="loadPrograms()">搜索本地</button>
     </div>
-    <div class="table-container"><table><thead><tr>
-      <th>院校</th><th>学院</th><th>专业</th><th>学位</th><th>研究方向</th><th>考试科目</th><th>操作</th>
-    </tr></thead><tbody id="programTableBody"></tbody></table></div>
+    <div class="table-container"><table><thead><tr><th>院校</th><th>学院</th><th>专业</th><th>学位</th><th>研究方向</th><th>考试科目</th><th>招生</th><th>操作</th></tr></thead><tbody id="programTableBody"></tbody></table></div>
   </div>
 
-  <!-- ══ Kanban ═════════════════════════════════════════════════════ -->
-  <div class="page" id="page-kanban">
-    <div class="page-header">
-      <div><div class="page-title">📋 申请进度看板</div><div class="page-subtitle">💡 拖拽卡片到目标列即可变更状态</div></div>
-      <button class="btn btn-primary" onclick="loadKanban()">🔄 刷新</button>
-    </div>
-    <div class="kanban-board" id="kanbanBoard"></div>
-  </div>
+  <!-- Kanban -->
+  <div class="page" id="page-kanban"><div class="page-header"><div><div class="page-title">📋 申请进度看板</div><div class="page-subtitle">拖拽卡片到目标列即可变更状态</div></div><button class="btn btn-primary" onclick="loadKanban()">🔄 刷新</button></div><div class="kanban-board" id="kanbanBoard"></div></div>
 
-  <!-- ══ Projects ═══════════════════════════════════════════════════ -->
-  <div class="page" id="page-projects">
-    <div class="page-header">
-      <div><div class="page-title">🎯 我的项目库</div></div>
-      <div style="display:flex;gap:10px">
-        <button class="btn btn-secondary" onclick="exportData()">📊 导出Excel</button>
-        <button class="btn btn-success" onclick="showProjectModal()">＋ 添加项目</button>
-      </div>
-    </div>
-    <div class="filter-bar">
-      <input class="search-input" id="projectSearch" placeholder="🔍 搜索..." oninput="loadProjects()">
-      <select class="select-input" id="projectBatchFilter" onchange="loadProjects()">
-        <option value="">全部批次</option><option>夏令营</option><option>预推免</option><option>九推</option>
-      </select>
-      <select class="select-input" id="projectStatusFilter" onchange="loadProjects()">
-        <option value="">全部状态</option><option>计划中</option><option>已报名</option><option>等待通知</option>
-        <option>入营</option><option>参营中</option><option>优营(拟录取)</option><option>未通过</option><option>已放弃</option>
-      </select>
-    </div>
-    <div class="table-container"><table><thead><tr>
-      <th>院校</th><th>专业</th><th>学位</th><th>批次</th><th>状态</th><th>材料</th><th>标签</th><th>操作</th>
-    </tr></thead><tbody id="projectTableBody"></tbody></table></div>
-  </div>
+  <!-- Projects -->
+  <div class="page" id="page-projects"><div class="page-header"><div><div class="page-title">🎯 我的项目库</div></div><div style="display:flex;gap:8px"><button class="btn btn-secondary" onclick="exportData()">📊 导出 Excel</button><button class="btn btn-success" onclick="showProjectModal()">＋ 新建项目</button></div></div><div class="filter-bar"><input class="search-input" id="projectSearch" placeholder="搜索..." oninput="loadProjects()"><select class="select-input" id="projectBatchFilter" onchange="loadProjects()"><option value="">全部批次</option><option>夏令营</option><option>预推免</option><option>九推</option></select><select class="select-input" id="projectStatusFilter" onchange="loadProjects()"><option value="">全部状态</option><option>计划中</option><option>已报名</option><option>等待通知</option><option>入营</option><option>参营中</option><option>优营(拟录取)</option><option>未通过</option><option>已放弃</option></select></div><div class="table-container"><table><thead><tr><th>院校</th><th>专业</th><th>学位</th><th>批次</th><th>状态</th><th>材料</th><th>标签</th><th>操作</th></tr></thead><tbody id="projectTableBody"></tbody></table></div></div>
 
-  <!-- ══ Timeline ═══════════════════════════════════════════════════ -->
-  <div class="page" id="page-timeline">
-    <div class="page-header">
-      <div><div class="page-title">📅 时间节点总览</div><div class="page-subtitle">💡 黄色=临近 红色=已过期</div></div>
-      <button class="btn btn-success" onclick="showTimelineModal()">＋ 添加节点</button>
-    </div>
-    <div class="filter-bar">
-      <select class="select-input" id="timelineProjectFilter" onchange="loadTimeline()"><option value="">全部项目</option></select>
-    </div>
-    <div class="table-container"><table><thead><tr>
-      <th>项目</th><th>节点</th><th>日期</th><th>剩余</th><th>描述</th><th>操作</th>
-    </tr></thead><tbody id="timelineTableBody"></tbody></table></div>
-  </div>
+  <!-- Timeline -->
+  <div class="page" id="page-timeline"><div class="page-header"><div><div class="page-title">📅 时间节点总览</div></div><button class="btn btn-success" onclick="showTimelineModal()">＋ 添加节点</button></div><div class="filter-bar"><select class="select-input" id="timelineProjectFilter" onchange="loadTimeline()"><option value="">全部项目</option></select></div><div class="table-container"><table><thead><tr><th>项目</th><th>节点</th><th>日期</th><th>剩余</th><th>描述</th><th>操作</th></tr></thead><tbody id="timelineTableBody"></tbody></table></div></div>
 
-  <!-- ══ Materials ══════════════════════════════════════════════════ -->
-  <div class="page" id="page-materials">
-    <div class="page-header">
-      <div><div class="page-title">📁 材料管理</div></div>
-    </div>
-    <div class="filter-bar">
-      <select class="select-input" id="materialProjectFilter" onchange="loadMaterials()"><option value="">全部项目</option></select>
-      <select class="select-input" id="materialStatusFilter" onchange="loadMaterials()">
-        <option value="">全部状态</option><option>未开始</option><option>进行中</option><option>已完成</option>
-      </select>
-    </div>
-    <div class="table-container"><table><thead><tr>
-      <th>项目</th><th>材料</th><th>状态</th><th>完成度</th><th>文件路径</th><th>操作</th>
-    </tr></thead><tbody id="materialTableBody"></tbody></table></div>
-  </div>
+  <!-- Materials -->
+  <div class="page" id="page-materials"><div class="page-header"><div><div class="page-title">📁 材料管理</div></div></div><div class="filter-bar"><select class="select-input" id="materialProjectFilter" onchange="loadMaterials()"><option value="">全部项目</option></select><select class="select-input" id="materialStatusFilter" onchange="loadMaterials()"><option value="">全部状态</option><option>未开始</option><option>进行中</option><option>已完成</option></select></div><div class="table-container"><table><thead><tr><th>项目</th><th>材料</th><th>状态</th><th>进度</th><th>文件</th><th>操作</th></tr></thead><tbody id="materialTableBody"></tbody></table></div></div>
 
-  <!-- ══ Interviews ═════════════════════════════════════════════════ -->
-  <div class="page" id="page-interviews">
-    <div class="page-header">
-      <div><div class="page-title">💬 面试/考核记录</div></div>
-      <button class="btn btn-success" onclick="showInterviewModal()">＋ 添加记录</button>
-    </div>
-    <div class="table-container"><table><thead><tr>
-      <th>项目</th><th>日期</th><th>形式</th><th>评分</th><th>问题</th><th>总结</th><th>操作</th>
-    </tr></thead><tbody id="interviewTableBody"></tbody></table></div>
-  </div>
+  <!-- Interviews -->
+  <div class="page" id="page-interviews"><div class="page-header"><div><div class="page-title">💬 面试记录</div></div><button class="btn btn-success" onclick="showInterviewModal()">＋ 添加记录</button></div><div class="table-container"><table><thead><tr><th>项目</th><th>日期</th><th>形式</th><th>评分</th><th>问题</th><th>总结</th><th>操作</th></tr></thead><tbody id="interviewTableBody"></tbody></table></div></div>
 
-  <!-- ══ Mentors ════════════════════════════════════════════════════ -->
-  <div class="page" id="page-mentors">
-    <div class="page-header">
-      <div><div class="page-title">👨‍🏫 导师联系记录</div></div>
-      <button class="btn btn-success" onclick="showMentorModal()">＋ 添加导师</button>
-    </div>
-    <div class="filter-bar">
-      <select class="select-input" id="mentorStatusFilter" onchange="loadMentors()">
-        <option value="">全部</option><option>未发</option><option>已发</option><option>已回复</option>
-        <option>积极回复</option><option>婉拒</option><option value="__followup__">⚠️ 待跟进</option>
-      </select>
-    </div>
-    <div class="table-container"><table><thead><tr>
-      <th>姓名</th><th>院校</th><th>方向</th><th>邮箱</th><th>首次联系</th><th>状态</th><th>下次跟进</th><th>操作</th>
-    </tr></thead><tbody id="mentorTableBody"></tbody></table></div>
-  </div>
+  <!-- Mentors -->
+  <div class="page" id="page-mentors"><div class="page-header"><div><div class="page-title">👨‍🏫 导师联系记录</div></div><button class="btn btn-success" onclick="showMentorModal()">＋ 添加导师</button></div><div class="filter-bar"><select class="select-input" id="mentorStatusFilter" onchange="loadMentors()"><option value="">全部</option><option>未发</option><option>已发</option><option>已回复</option><option>积极回复</option><option>婉拒</option><option value="__followup__">⚠️ 待跟进</option></select></div><div class="table-container"><table><thead><tr><th>姓名</th><th>院校</th><th>方向</th><th>邮箱</th><th>首次联系</th><th>状态</th><th>下次跟进</th><th>操作</th></tr></thead><tbody id="mentorTableBody"></tbody></table></div></div>
 
-  <!-- ══ Templates ══════════════════════════════════════════════════ -->
+  <!-- Templates -->
   <div class="page" id="page-templates">
-    <div class="page-header">
-      <div><div class="page-title">📝 文书模板库</div></div>
-      <div style="display:flex;gap:10px">
-        <button class="btn btn-primary" onclick="showTemplateUpload()">📂 导入文件</button>
-        <button class="btn btn-success" onclick="showTemplateModal()">＋ 添加模板</button>
-      </div>
-    </div>
-    <div class="filter-bar">
-      <select class="select-input" id="templateCategoryFilter" onchange="loadTemplates()">
-        <option value="">全部分类</option><option>个人陈述</option><option>邮件模板</option><option>感谢信</option><option>其他</option>
-      </select>
-      <input class="search-input" id="templateSearch" placeholder="🔍 搜索..." oninput="loadTemplates()">
-    </div>
-    <div class="split-grid">
-      <div class="table-container"><table><thead><tr><th>标题</th><th>分类</th><th>预览</th><th>操作</th></tr></thead>
-      <tbody id="templateTableBody"></tbody></table></div>
-      <div class="preview-panel" id="templatePreview"><div class="empty-state"><div class="empty-state-icon">📄</div><h3>选择左侧模板查看内容</h3></div></div>
-    </div>
+    <div class="page-header"><div><div class="page-title">📝 文书模板库</div><div class="page-subtitle">上传文件 · 原格式下载 · 支持 Word / PDF / Excel / TXT</div></div><div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="showTemplateUpload()">📂 上传文件</button><button class="btn btn-secondary" onclick="showTemplateModal()">＋ 新建文本</button></div></div>
+    <div class="filter-bar"><select class="select-input" id="templateCategoryFilter" onchange="loadTemplates()"><option value="">全部分类</option><option>个人陈述</option><option>邮件模板</option><option>感谢信</option><option>其他</option></select><input class="search-input" id="templateSearch" placeholder="搜索模板..." oninput="loadTemplates()"></div>
+    <div class="table-container"><table><thead><tr><th style="width:60px"></th><th>文件名</th><th style="width:100px">分类</th><th style="width:100px">大小</th><th style="width:200px">操作</th></tr></thead><tbody id="templateTableBody"></tbody></table></div>
   </div>
+</main></div>
 
-</main>
-</div>
+<!-- University Detail Modal -->
+<div class="modal-overlay" id="uniModalOverlay"><div class="modal" style="max-width:680px"><div class="modal-header"><h2 id="uniModalTitle"></h2><button class="modal-close" onclick="closeUniModal()">✕</button></div><div class="modal-body" id="uniModalBody"></div></div></div>
 
-<!-- ═══ Modal ════════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="modalOverlay">
-  <div class="modal" id="modalContent">
-    <div class="modal-header"><h2 id="modalTitle"></h2><button class="modal-close" onclick="closeModal()">✕</button></div>
-    <div class="modal-body" id="modalBody"></div>
-    <div class="modal-footer" id="modalFooter"></div>
-  </div>
-</div>
+<!-- Program Detail Modal -->
+<div class="modal-overlay" id="progDetailOverlay"><div class="modal" style="max-width:640px"><div class="modal-header"><h2 id="progDetailTitle"></h2><button class="modal-close" onclick="closeProgDetail()">✕</button></div><div class="modal-body" id="progDetailBody"></div></div></div>
+
+<!-- Generic Modal -->
+<div class="modal-overlay" id="modalOverlay"><div class="modal" id="modalContent"><div class="modal-header"><h2 id="modalTitle"></h2><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-footer" id="modalFooter"></div></div></div>
 <div class="toast-container" id="toastContainer"></div>
 
 <script src="/static/js/app.js"></script>

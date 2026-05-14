@@ -1,12 +1,12 @@
 @echo off
-chcp 65001 >nul
+title 保研全程管理 Server
 cd /d "%~dp0"
-echo =====================================
-echo   保研全程管理 Web v3.0 — 生产模式
-echo =====================================
+echo ================================================
+echo   保研全程管理 v4 — Production Server
+echo   http://localhost:5000
+echo ================================================
 echo.
-echo   启动中... http://localhost:5000
-echo   按 Ctrl+C 停止服务
+echo   Press Ctrl+C to stop the server
 echo.
-python app.py --prod
+python run.py
 pause
