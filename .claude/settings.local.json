@@ -31,7 +31,9 @@
       "Bash(python3 *)",
       "Bash(timeout 5 python run.py)",
       "Skill(ui-ux-pro-max:ui-ux-pro-max)",
-      "Bash(python build_exe.py)"
+      "Bash(python build_exe.py)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }
