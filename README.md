@@ -84,7 +84,16 @@ python build_exe.py
 - **数据处理**: pandas, openpyxl, pdfplumber, python-docx
 - **生产部署**: waitress (WSGI)
 - **打包**: PyInstaller (单文件 .exe)
-- **数据来源**: 中国研究生招生信息网 (yz.chsi.com.cn) 520 所院校 + 教育部第四轮学科评估
+- **数据来源**: 中国研究生招生信息网 (yz.chsi.com.cn) + 保研通知网 (baoyantongzhi.com)
+
+## 数据来源声明
+
+本项目引用的外部数据均来自公开网站，仅用于个人学习与分享，**不做商用**：
+
+- 院校名单及硕士专业数据来源于 **[中国研究生招生信息网](https://yz.chsi.com.cn)**（教育部直属官方平台）
+- 夏令营/预推免通知来源于 **[保研通知网](https://www.baoyantongzhi.com/notice)**
+
+所有嵌入或链接的外部网站内容，其知识产权归原作者及网站所有。如有侵权请联系删除。
 
 ## License
 
