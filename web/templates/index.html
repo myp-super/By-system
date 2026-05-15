@@ -88,6 +88,34 @@
 <!-- Program Detail Modal -->
 <div class="modal-overlay" id="progDetailOverlay"><div class="modal" style="max-width:640px"><div class="modal-header"><h2 id="progDetailTitle"></h2><button class="modal-close" onclick="closeProgDetail()">✕</button></div><div class="modal-body" id="progDetailBody"></div></div></div>
 
+<!-- Auth Page (login/register) -->
+<div class="page active" id="page-auth">
+  <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg)">
+    <div class="card" style="width:400px;padding:32px">
+      <h2 style="font-size:20px;font-weight:700;text-align:center;margin-bottom:4px;font-family:Fira Code,monospace">保研全程管理</h2>
+      <p style="text-align:center;color:var(--text-secondary);font-size:13px;margin-bottom:24px" id="authSubtitle">登录你的账号</p>
+      <div id="authError" style="display:none;background:var(--danger-bg);color:var(--danger);padding:10px;border-radius:var(--radius);margin-bottom:14px;font-size:13px"></div>
+      <div class="form-group" id="nicknameGroup" style="display:none">
+        <label class="form-label">昵称</label>
+        <input class="form-input" id="authNickname" placeholder="你的昵称">
+      </div>
+      <div class="form-group">
+        <label class="form-label">邮箱</label>
+        <input class="form-input" type="email" id="authEmail" placeholder="your@email.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">密码</label>
+        <input class="form-input" type="password" id="authPassword" placeholder="至少6位">
+      </div>
+      <button class="btn btn-primary" style="width:100%;padding:10px;justify-content:center" id="authBtn" onclick="handleAuth()">登录</button>
+      <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--text-secondary)">
+        <span id="authToggleText">没有账号？</span>
+        <a href="javascript:void(0)" onclick="toggleAuthMode()" style="color:var(--primary);font-weight:600" id="authToggleLink">注册</a>
+      </p>
+    </div>
+  </div>
+</div>
+
 <!-- Preview Modal (fullscreen) -->
 <div class="modal-overlay" id="previewOverlay" style="z-index:2000">
   <div style="position:absolute;top:16px;right:16px;z-index:2001">
