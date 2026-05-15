@@ -39,9 +39,11 @@ class Project(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     school = Column(String(100), default=""); college = Column(String(100), default="")
     major = Column(String(100), default=""); degree_type = Column(String(20), default="学硕")
-    batch = Column(String(20), default="夏令营"); official_link = Column(String(500), default="")
-    tags = Column(String(200), default=""); status = Column(String(20), default="计划中")
-    notes = Column(Text, default="")
+    batch = Column(String(20), default="夏令营"); status = Column(String(20), default="计划中")
+    school_url = Column(String(500), default="")       # 学校官网
+    apply_url = Column(String(500), default="")        # 报名网址
+    official_link = Column(String(500), default="")
+    tags = Column(String(200), default=""); notes = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.now); updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     materials = relationship("Material", back_populates="project", cascade="all, delete-orphan")
     timelines = relationship("Timeline", back_populates="project", cascade="all, delete-orphan")
@@ -330,6 +332,7 @@ def dashboard():
 def _proj_dict(p):
     return dict(id=p.id,school=p.school,college=p.college,major=p.major,
                 degree_type=p.degree_type,batch=p.batch,status=p.status,
+                school_url=p.school_url,apply_url=p.apply_url,
                 official_link=p.official_link,tags=p.tags,notes=p.notes,
                 created_at=str(p.created_at)[:19] if p.created_at else None,
                 updated_at=str(p.updated_at)[:19] if p.updated_at else None,
@@ -377,6 +380,7 @@ def create_project():
         p = Project(school=data.get('school',''),college=data.get('college',''),
                     major=data.get('major',''),degree_type=data.get('degree_type','学硕'),
                     batch=data.get('batch','夏令营'),status=data.get('status','计划中'),
+                    school_url=data.get('school_url',''),apply_url=data.get('apply_url',''),
                     official_link=data.get('official_link',''),tags=data.get('tags',''),
                     notes=data.get('notes',''),created_at=datetime.now(),updated_at=datetime.now())
         session.add(p); session.flush()
@@ -395,7 +399,8 @@ def update_project(pid):
     try:
         p = session.query(Project).filter_by(id=pid).first()
         if not p: return jsonify(dict(error="Not found")),404
-        for f in ['school','college','major','degree_type','batch','status','official_link','tags','notes']:
+        for f in ['school','college','major','degree_type','batch','status',
+                  'school_url','apply_url','official_link','tags','notes']:
             if f in data: setattr(p,f,data[f])
         p.updated_at = datetime.now(); session.commit()
         return jsonify(_proj_dict(p))

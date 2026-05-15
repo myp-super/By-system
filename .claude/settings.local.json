@@ -37,7 +37,13 @@
       "Bash(GIT_EDITOR=true git rebase --continue)",
       "Bash(git stash *)",
       "Bash(git pull *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(python replace_js.py)",
+      "Skill(example-skills:webapp-testing)",
+      "Bash(python \"C:/Users/Lenovo/.claude/plugins/cache/anthropic-agent-skills/example-skills/f458cee31a75/skills/webapp-testing/scripts/with_server.py\" --help)",
+      "Bash(python \"C:/Users/Lenovo/.claude/plugins/cache/anthropic-agent-skills/example-skills/f458cee31a75/skills/webapp-testing/scripts/with_server.py\" --server \"python app.py\" --port 5000 -- python debug_test.py)",
+      "Bash(python -m playwright install chromium)",
+      "Bash(python check_js.py)"
     ]
   }
 }

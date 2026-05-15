@@ -209,11 +209,29 @@ async function onKDrop(e, status) { e.preventDefault(); e.currentTarget.classLis
 
 // ═══ 4-8. 项目/时间/材料/面试/导师 ═══════════════════════════════════════
 async function loadProjects() {
-  const q = document.getElementById('projectSearch')?.value||'', batch = document.getElementById('projectBatchFilter')?.value||'', status = document.getElementById('projectStatusFilter')?.value||'';
-  const data = await get(`/projects?${new URLSearchParams({q,batch,status})}`);
-  const tbody = document.getElementById('projectTableBody');
-  if (!data.length) { tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><h3>暂无项目</h3><p>点击"+ 新建项目"开始添加</p></div></td></tr>'; return; }
-  tbody.innerHTML = data.map(p => `<tr><td><strong>${p.school}</strong>${p.college?`<br><small style="color:var(--text-muted)">${p.college}</small>`:''}</td><td>${p.major}</td><td>${p.degree_type}</td><td>${p.batch}</td><td>${statusBadge(p.status)}</td><td><div class="progress-bar"><div class="progress-fill" style="width:${p.material_count?Math.round(p.material_done/p.material_count*100):0}%"></div></div><small>${p.material_done}/${p.material_count}</small></td><td><small>${p.tags||'-'}</small></td><td><button class="btn btn-sm btn-primary" onclick="showProjectModal(${p.id})">编辑</button><button class="btn btn-sm btn-danger" onclick="deleteProject(${p.id})">删除</button></td></tr>`).join('');
+  var q = document.getElementById("projectSearch")?.value||"";
+  var batch = document.getElementById("projectBatchFilter")?.value||"";
+  var status = document.getElementById("projectStatusFilter")?.value||"";
+  var all = await get("/projects?" + new URLSearchParams({q:q,batch:batch,status:status}));
+  var grid = document.getElementById("projectCardsGrid");
+  if (!all.length) { grid.innerHTML = '<div class="empty-state"><h3>暂无项目</h3><p>点击 + 新建项目 开始</p></div>'; return; }
+  var sc = {"计划中":"#94A3B8","已报名":"#3B82F6","等待通知":"#F59E0B","入营":"#06B6D4","参营中":"#F97316","优营(拟录取)":"#8B5CF6","未通过":"#EF4444","已放弃":"#9CA3AF"};
+  grid.innerHTML = all.map(function(p) {
+    var c = sc[p.status] || "#94A3B8";
+    return '<div class="project-card" onclick="openProjDetail('+p.id+')">'
+      +'<div class="project-card-header"><div><strong style="font-size:15px;color:var(--text-primary)">'+p.school+'</strong>'
+      +'<div style="font-size:12px;color:var(--text-muted);margin-top:2px">'+(p.college||"")+'</div></div>'
+      +'<span class="badge" style="background:'+c+'15;color:'+c+';font-weight:700">'+p.status+'</span></div>'
+      +'<div class="project-card-body">'
+      +'<div style="padding:3px 0;font-size:13px"><span style="color:var(--text-secondary);font-size:11px">专业：</span>'+(p.major||"—")+'</div>'
+      +'<div style="padding:3px 0;font-size:13px"><span style="color:var(--text-secondary);font-size:11px">学位：</span>'+(p.degree_type||"—")+' · <span style="color:var(--text-secondary);font-size:11px">批次：</span>'+(p.batch||"—")+'</div>'
+      +(p.school_url?'<div style="padding:2px 0;font-size:12px"><a href="'+p.school_url+'" target="_blank" onclick="event.stopPropagation()" style="color:var(--primary)">学校官网</a></div>':"")
+      +(p.apply_url?'<div style="padding:2px 0;font-size:12px"><a href="'+p.apply_url+'" target="_blank" onclick="event.stopPropagation()" style="color:var(--primary)">报名网址</a></div>':"")
+      +'</div>'
+      +'<div class="project-card-footer"><span style="color:var(--text-secondary)">材料 '+p.material_done+'/'+p.material_count+'</span>'
+      +'<span style="color:var(--text-secondary)">时间点 '+(p.timeline_count||0)+'</span>'
+      +'<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteProject('+p.id+')">删除</button></div></div>';
+  }).join("");
 }
 async function showProjectModal(pid) {
   let p = {school:'',college:'',major:'',degree_type:'学硕',batch:'夏令营',status:'计划中',official_link:'',tags:'',notes:''};
@@ -277,7 +295,7 @@ async function loadMaterials() {
   const tbody=document.getElementById('materialTableBody'); if(!all.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty-state"><h3>暂无材料</h3></div></td></tr>';return;}
   const groups={};all.forEach(m=>{if(!groups[m.label])groups[m.label]=[];groups[m.label].push(m);});
   tbody.innerHTML=Object.entries(groups).map(([label,mats])=>{const done=mats.filter(m=>m.status=='已完成').length,pct=Math.round(done/mats.length*100);
-    return mats.map((m,i)=>`<tr>${i===0?`<td rowspan="${mats.length}"><strong>${label}</strong></td>`:''}<td>${m.name}</td><td>${m.status=='已完成'?'✅':m.status=='进行中'?'🔄':'⬜'} ${m.status}</td>${i===0?`<td rowspan="${mats.length}"><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div><small>${done}/${mats.length}</small></td>`:''}<td><small>${m.file_path||'-'}</small></td><td><button class="btn btn-sm btn-success" onclick="updateMatStatus(${m.id},'已完成')">完成</button></td></tr>`).join('');}).join('');
+    return mats.map((m,i)=>`<tr>${i===0?`<td rowspan="${mats.length}"><strong>${label}</strong></td>`:''}<td>${m.name}</td><td>${m.status=='已完成'?'✅':m.status=='进行中'?'🔄':'⬜'} ${m.status}</td>${i===0?`<td rowspan="${mats.length}"><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div><small>${done}/${mats.length}</small></td>`:''}<td><small>${m.file_path||'-'}</small></td><td><select style="padding:2px 4px;font-size:12px;border:1px solid var(--border);border-radius:3px" onchange="updateMatStatus(${m.id},this.value)"><option ${m.status==='未开始'?'selected':''}>未开始</option><option ${m.status==='进行中'?'selected':''}>进行中</option><option ${m.status==='已完成'?'selected':''}>已完成</option></select></td></tr>`).join('');}).join('');
 }
 async function updateMatStatus(mid,status){await put(`/materials/${mid}`,{status});loadMaterials();}
 
@@ -426,6 +444,28 @@ async function saveTemplate(tid) {
 }
 async function deleteTemplate(tid) { if (!confirm('确定删除此文件？')) return; await del(`/templates/${tid}`); toast('已删除','success'); loadTemplates(); }
 function exportData() { window.open(API+'/export','_blank'); }
+
+// Card detail popup
+async function openProjDetail(pid) {
+  var p = await get("/projects/"+pid);
+  openModal(p.school+" — "+(p.major||""),
+    "<div style=\"padding:16px\">"
+    +"<p><strong>院校：</strong>"+(p.school||"—")+"</p>"
+    +"<p><strong>学院：</strong>"+(p.college||"—")+"</p>"
+    +"<p><strong>专业：</strong>"+(p.major||"—")+"</p>"
+    +"<p><strong>学位类型：</strong>"+(p.degree_type||"—")+" · <strong>批次：</strong>"+(p.batch||"—")+" · <strong>状态：</strong>"+statusBadge(p.status)+"</p>"
+    +(p.school_url?"<p><strong>学校官网：</strong><a href=\""+p.school_url+"\" target=\"_blank\" style=\"color:var(--primary)\">"+p.school_url+"</a></p>":"")
+    +(p.apply_url?"<p><strong>报名网址：</strong><a href=\""+p.apply_url+"\" target=\"_blank\" style=\"color:var(--primary)\">"+p.apply_url+"</a></p>":"")
+    +"<p><strong>标签：</strong>"+(p.tags||"—")+"</p>"
+    +"<p><strong>备注：</strong>"+(p.notes||"—")+"</p>"
+    +"<hr style=\"margin:12px 0;border:none;border-top:1px solid var(--border)\">"
+    +"<p><strong>材料完成：</strong>"+p.material_done+"/"+p.material_count+" (共"+(p.materials||[]).length+"项)</p>"
+    +"<p><strong>时间节点：</strong>"+(p.timelines||[]).length+"个</p>"
+    +"</div>",
+    "<button class=\"btn btn-primary\" onclick=\"showProjectModal("+p.id+")\">编辑</button>"
+    +"<button class=\"btn btn-danger\" onclick=\"deleteProject("+p.id+");closeModal()\">删除</button>"
+  );
+}
 
 // Init
 refreshDashboard();
