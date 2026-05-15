@@ -29,7 +29,9 @@
       "Bash(python -c \"from app import app; print\\(f'OK: {len\\(app.url_map._rules\\)} routes'\\); print\\(f'Unis loaded: {len\\(app.ALL_SCHOOLS\\) if hasattr\\(app,\\\\\"ALL_SCHOOLS\\\\\"\\) else \\\\\"check\\\\\"}'\\)\")",
       "Bash(python data/expand_programs.py)",
       "Bash(python3 *)",
-      "Bash(timeout 5 python run.py)"
+      "Bash(timeout 5 python run.py)",
+      "Skill(ui-ux-pro-max:ui-ux-pro-max)",
+      "Bash(python build_exe.py)"
     ]
   }
 }

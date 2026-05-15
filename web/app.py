@@ -2,7 +2,7 @@
 保研全程管理 Web v3.0 — Flask Backend
 Features: 信息广场爬虫 · 硕士专业查询 · PDF/Excel解析 · 生产级部署
 """
-import sys, os, io, re, threading, json, uuid
+import sys, os, io, re, threading, json, uuid, zipfile
 from pathlib import Path
 from datetime import date, datetime, timedelta
 from werkzeug.utils import secure_filename
@@ -685,67 +685,129 @@ def _parse_docx(file_bytes):
 
 @app.route('/api/templates/upload', methods=['POST'])
 def upload_template_file():
-    """Upload a file and store it on disk (original format preserved)."""
-    if 'file' not in request.files:
+    """Upload one or multiple files — store on disk in original format."""
+    files = request.files.getlist('files') or ([request.files['file']] if 'file' in request.files else [])
+    if not files or all(not f.filename for f in files):
         return jsonify(dict(error="未选择文件")), 400
-    file = request.files['file']
-    if not file.filename:
-        return jsonify(dict(error="文件名为空")), 400
 
-    filename = secure_filename(file.filename)
-    original_name = file.filename
-    ext = os.path.splitext(filename)[1].lower()
-
-    # Generate unique storage name to avoid collisions
-    stored_name = f"{uuid.uuid4().hex}{ext}"
     upload_dir = DB_DIR / "uploads"
     upload_dir.mkdir(parents=True, exist_ok=True)
-    stored_path = upload_dir / stored_name
-
-    file_bytes = file.read()
-    file_size = len(file_bytes)
-
-    with open(stored_path, 'wb') as f:
-        f.write(file_bytes)
-
-    # Save to DB
     session = SessionLocal()
+    results = []
+
     try:
-        t = Template(
-            title=original_name,
-            category=request.form.get('category', '其他'),
-            content='',  # not extracting text
-            file_path=str(stored_path),
-            original_filename=original_name,
-            file_size=file_size,
-        )
-        session.add(t)
+        for file in files:
+            if not file.filename:
+                continue
+            filename = secure_filename(file.filename)
+            ext = os.path.splitext(filename)[1].lower()
+            stored_name = f"{uuid.uuid4().hex}{ext}"
+            stored_path = upload_dir / stored_name
+            file_bytes = file.read()
+            file_size = len(file_bytes)
+
+            with open(stored_path, 'wb') as f:
+                f.write(file_bytes)
+
+            t = Template(
+                title=file.filename,
+                category=request.form.get('category', '其他'),
+                content='',
+                file_path=str(stored_path),
+                original_filename=file.filename,
+                file_size=file_size,
+            )
+            session.add(t)
+            session.flush()
+            results.append(dict(id=t.id, title=file.filename, file_size=file_size, ext=ext))
+
         session.commit()
-        tid = t.id
+    except Exception as e:
+        session.rollback()
+        return jsonify(dict(error=str(e))), 400
     finally:
         session.close()
 
-    return jsonify(dict(id=tid, title=original_name, file_size=file_size, ext=ext))
+    return jsonify(dict(files=results, count=len(results)))
+
+@app.route('/api/templates/download-batch', methods=['POST'])
+def download_batch_templates():
+    """Download selected templates as a ZIP file."""
+    ids = request.json.get('ids', []) if request.json else []
+    if not ids:
+        return jsonify(dict(error="未选择文件")), 400
+
+    session = SessionLocal()
+    try:
+        templates = session.query(Template).filter(Template.id.in_(ids)).all()
+
+        # Create ZIP in memory
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for t in templates:
+                if t.file_path and Path(t.file_path).exists():
+                    zf.write(t.file_path, t.original_filename or t.title)
+                elif t.content:
+                    # Text-only template: write as .txt
+                    zf.writestr(t.title if '.' in t.title else t.title + '.txt', t.content)
+
+        zip_buffer.seek(0)
+        return send_file(
+            zip_buffer,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=f'templates_batch_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip'
+        )
+    finally:
+        session.close()
 
 @app.route('/api/templates/<int:tid>/download')
 def download_template(tid):
-    """Download the original uploaded file."""
+    """Download the original file (attachment)."""
     session = SessionLocal()
     try:
         t = session.query(Template).filter_by(id=tid).first()
         if not t or not t.file_path:
             return jsonify(dict(error="文件不存在")), 404
+        file_path = Path(t.file_path)
+        if not file_path.exists():
+            return jsonify(dict(error="文件已被删除")), 404
+        return send_file(str(file_path), as_attachment=True,
+                         download_name=t.original_filename or t.title,
+                         mimetype='application/octet-stream')
+    finally:
+        session.close()
 
+@app.route('/api/templates/<int:tid>/preview')
+def preview_template(tid):
+    """Preview file inline in browser (Content-Disposition: inline)."""
+    session = SessionLocal()
+    try:
+        t = session.query(Template).filter_by(id=tid).first()
+        if not t or not t.file_path:
+            return jsonify(dict(error="文件不存在")), 404
         file_path = Path(t.file_path)
         if not file_path.exists():
             return jsonify(dict(error="文件已被删除")), 404
 
-        return send_file(
-            str(file_path),
-            as_attachment=True,
-            download_name=t.original_filename or t.title,
-            mimetype='application/octet-stream'
-        )
+        # Determine MIME type from extension
+        ext = os.path.splitext(t.original_filename or t.title)[1].lower()
+        mime_map = {
+            '.pdf': 'application/pdf',
+            '.txt': 'text/plain; charset=utf-8',
+            '.md': 'text/plain; charset=utf-8',
+            '.csv': 'text/csv; charset=utf-8',
+            '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+            '.gif': 'image/gif', '.svg': 'image/svg+xml', '.webp': 'image/webp',
+            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            '.doc': 'application/msword',
+            '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            '.xls': 'application/vnd.ms-excel',
+            '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            '.ppt': 'application/vnd.ms-powerpoint',
+        }
+        mime = mime_map.get(ext, 'application/octet-stream')
+        return send_file(str(file_path), mimetype=mime)
     finally:
         session.close()
 

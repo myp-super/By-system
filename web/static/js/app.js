@@ -17,7 +17,7 @@ function navigateTo(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const t = document.getElementById(`page-${page}`);
   if (t) t.classList.add('active');
-  const L = {dashboard:refreshDashboard, programs:loadPrograms, kanban:loadKanban,
+  const L = {dashboard:refreshDashboard, notices:null, programs:loadPrograms, kanban:loadKanban,
     projects:loadProjects, timeline:loadTimeline, materials:loadMaterials,
     interviews:loadInterviews, mentors:loadMentors, templates:loadTemplates};
   if (L[page]) L[page]();
@@ -294,68 +294,115 @@ async function deleteMentor(mid){if(!confirm('确定删除？'))return;await del
 function showMentorModal(mid){const load=async()=>{let m={name:'',school:'',research_direction:'',email:'',first_contact_date:'',status:'未发',reply_summary:'',next_followup_date:'',notes:''};if(mid){const mentors=await get('/mentors');const f=mentors.find(x=>x.id===mid);if(f)m=f;}openModal(mid?'编辑导师':'添加导师',`<div class="form-row"><input class="form-input" id="mN" value="${(m.name||'').replace(/"/g,'&quot;')}" placeholder="导师姓名"><div class="search-wrapper"><input class="form-input" id="mS" value="${(m.school||'').replace(/"/g,'&quot;')}" placeholder="所在院校" autocomplete="off"><div class="search-results" id="mSRes"></div></div></div><input class="form-input" id="mD" value="${(m.research_direction||'').replace(/"/g,'&quot;')}" placeholder="研究方向" style="margin:10px 0"><input type="email" class="form-input" id="mE" value="${(m.email||'').replace(/"/g,'&quot;')}" placeholder="邮箱" style="margin-bottom:10px"><div class="form-row"><input type="date" class="form-input" id="mFC" value="${m.first_contact_date||''}"><select class="form-input" id="mSt"><option>未发</option><option ${m.status=='已发'?'selected':''}>已发</option><option ${m.status=='已回复'?'selected':''}>已回复</option><option ${m.status=='积极回复'?'selected':''}>积极回复</option><option ${m.status=='婉拒'?'selected':''}>婉拒</option></select></div><textarea class="form-input" id="mR" placeholder="回复内容摘要" style="margin:10px 0">${(m.reply_summary||'').replace(/"/g,'&quot;')}</textarea><div class="form-row"><input type="date" class="form-input" id="mFU" value="${m.next_followup_date||''}"><input class="form-input" id="mNo" value="${(m.notes||'').replace(/"/g,'&quot;')}" placeholder="备注"></div>`,`<button class="btn btn-secondary" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveMentor(${mid||'null'})">保存</button>`);setupSearch('mS','mSRes');};load();}
 async function saveMentor(mid){const d={name:document.getElementById('mN').value.trim(),school:document.getElementById('mS').value.trim(),research_direction:document.getElementById('mD').value.trim(),email:document.getElementById('mE').value.trim(),first_contact_date:document.getElementById('mFC').value||null,status:document.getElementById('mSt').value,reply_summary:document.getElementById('mR').value.trim(),next_followup_date:document.getElementById('mFU').value||null,notes:document.getElementById('mNo').value.trim()};if(!d.name){toast('请填写导师姓名','error');return;}if(mid&&mid!=='null')await put(`/mentors/${mid}`,d);else await post('/mentors',d);closeModal();toast('保存成功','success');loadMentors();}
 
-// ═══ 9. 文书模板 — 文件上传/下载（原格式） ═══════════════════════════════
+// ═══ 9. 文书模板 — 批量上传/下载（原格式） ═══════════════════════════
+
+function toggleAllTpl() {
+  const all = document.getElementById('selectAllTpl').checked;
+  document.querySelectorAll('.tpl-checkbox').forEach(cb => cb.checked = all);
+}
+function getSelectedTplIds() {
+  return [...document.querySelectorAll('.tpl-checkbox:checked')].map(cb => parseInt(cb.value));
+}
+
 async function loadTemplates() {
   const cat = document.getElementById('templateCategoryFilter').value;
   const q = document.getElementById('templateSearch').value;
   const data = await get(`/templates?${new URLSearchParams({category:cat, q})}`);
   window._tplData = data;
   const tbody = document.getElementById('templateTableBody');
-  if (!data.length) { tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><h3>暂无文件</h3><p>点击"上传文件"添加 Word / PDF / Excel / TXT 模板</p></div></td></tr>'; return; }
+  document.getElementById('selectAllTpl').checked = false;
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><h3>暂无文件</h3><p>点击"批量上传"添加文件</p></div></td></tr>'; return; }
   tbody.innerHTML = data.map(t => {
     const title = t.title || t.original_filename || '';
     const extMatch = title.match(/\.(\w+)$/);
     const ext = extMatch ? extMatch[1].toLowerCase() : '';
-    const icons = {docx:'📄', doc:'📄', pdf:'📕', xlsx:'📊', xls:'📊', txt:'📝', md:'📝', pptx:'📽️'};
+    const icons = {docx:'📄', doc:'📄', pdf:'📕', xlsx:'📊', xls:'📊', txt:'📝', md:'📝', pptx:'📽️', zip:'🗜️'};
     const icon = icons[ext] || '📁';
     const sizeStr = t.file_size ? (t.file_size < 1024 ? t.file_size+' B' : t.file_size < 1048576 ? (t.file_size/1024).toFixed(1)+' KB' : (t.file_size/1048576).toFixed(1)+' MB') : (t.content ? (t.content||'').length+' 字' : '—');
     return `<tr>
+      <td style="text-align:center"><input type="checkbox" class="tpl-checkbox" value="${t.id}" onchange="document.getElementById('selectAllTpl').checked = false"></td>
       <td style="font-size:22px;text-align:center">${icon}</td>
       <td><strong>${title}</strong></td>
       <td>${t.category||'其他'}</td>
       <td>${sizeStr}</td>
       <td>
-        ${t.has_file ? `<a href="${API}/templates/${t.id}/download" class="btn btn-sm btn-success" download>💾 下载</a>` : `<button class="btn btn-sm btn-primary" onclick="copyTplText(${t.id})">📋 复制文本</button>`}
+        ${t.has_file ? `<button class="btn btn-sm btn-info" onclick="previewFile(${t.id})">👁 预览</button><a href="${API}/templates/${t.id}/download" class="btn btn-sm btn-success">💾 下载</a>` : `<button class="btn btn-sm btn-primary" onclick="copyTplText(${t.id})">📋 复制</button>`}
         <button class="btn btn-sm btn-primary" onclick="showTemplateModal(${t.id})">编辑</button>
         <button class="btn btn-sm btn-danger" onclick="deleteTemplate(${t.id})">删除</button>
       </td></tr>`;
   }).join('');
 }
+function previewFile(tid) {
+  const t = window._tplData?.find(x => x.id === tid);
+  if (!t || !t.has_file) { toast('无可预览的文件','error'); return; }
+  document.getElementById('previewIframe').src = API + '/templates/' + tid + '/preview';
+  document.getElementById('previewOverlay').classList.add('show');
+}
+function closePreview() {
+  document.getElementById('previewOverlay').classList.remove('show');
+  document.getElementById('previewIframe').src = '';
+}
+document.getElementById('previewOverlay').addEventListener('click', function(e) { if (e.target === this) closePreview(); });
+
 async function copyTplText(tid) {
   const t = window._tplData?.find(x => x.id === tid);
-  if (t) { await navigator.clipboard.writeText(t.full_content || t.content || ''); toast('已复制到剪贴板','success'); }
+  if (t) { await navigator.clipboard.writeText(t.full_content || t.content || ''); toast('已复制','success'); }
 }
 
-// Upload — stores original file on server
+// Batch download — ZIP
+async function batchDownload() {
+  const ids = getSelectedTplIds();
+  if (ids.length === 0) { toast('请先勾选要下载的文件','error'); return; }
+  const r = await fetch(API+'/templates/download-batch', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ids})});
+  if (!r.ok) { toast('下载失败','error'); return; }
+  const blob = await r.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'templates_batch.zip'; document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast(`已打包下载 ${ids.length} 个文件`,'success');
+}
+
+// Batch upload — multiple files
 function showTemplateUpload() {
-  openModal('📂 上传文件', `
+  openModal('📂 批量上传文件', `
     <div class="drop-zone" id="fileDZ" onclick="document.getElementById('fInput').click()"
          ondragover="event.preventDefault();this.classList.add('drag-over')"
          ondragleave="this.classList.remove('drag-over')"
          ondrop="onFileDrop(event)">
       <div class="drop-zone-icon">📂</div>
       <div class="drop-zone-text">拖拽文件到此处或点击选择</div>
-      <div class="drop-zone-hint">支持所有格式 · 原文件存储 · 原格式下载</div>
-      <input type="file" id="fInput" style="display:none">
+      <div class="drop-zone-hint">支持多选 · 所有格式 · 原文件存储 · 原格式下载</div>
+      <input type="file" id="fInput" multiple style="display:none">
     </div>
     <div id="upResult"></div>
   `, `<button class="btn btn-secondary" onclick="closeModal()">关闭</button>`);
-  setTimeout(() => { document.getElementById('fInput').onchange = onFileSelect; }, 100);
+  setTimeout(() => { document.getElementById('fInput').onchange = onFilesSelect; }, 100);
 }
-async function onFileSelect(e) { const file = e.target.files[0]; if (file) await doUpload(file); }
-async function onFileDrop(e) { e.preventDefault(); e.currentTarget.classList.remove('drag-over'); const file = e.dataTransfer.files[0]; if (file) await doUpload(file); }
-async function doUpload(file) {
+async function onFilesSelect(e) {
+  const files = [...e.target.files];
+  if (files.length) await doBatchUpload(files);
+}
+async function onFileDrop(e) {
+  e.preventDefault(); e.currentTarget.classList.remove('drag-over');
+  const files = [...e.dataTransfer.files];
+  if (files.length) await doBatchUpload(files);
+}
+async function doBatchUpload(files) {
   const div = document.getElementById('upResult');
-  const sizeStr = file.size < 1048576 ? (file.size/1024).toFixed(1)+' KB' : (file.size/1048576).toFixed(1)+' MB';
-  div.innerHTML = '<div style="text-align:center;padding:20px"><div class="spinner"></div>上传中...</div>';
-  const fd = new FormData(); fd.append('file', file);
+  div.innerHTML = `<div style="text-align:center;padding:20px"><div class="spinner"></div>上传 ${files.length} 个文件中...</div>`;
+  const fd = new FormData();
+  files.forEach(f => fd.append('files', f));
   const r = await fetch(API+'/templates/upload', {method:'POST', body:fd});
   const result = await r.json();
   if (result.error) { div.innerHTML = `<div style="color:var(--danger);padding:14px;background:var(--danger-bg);border-radius:var(--radius)">❌ ${result.error}</div>`; }
   else {
+    const totalSize = result.files.reduce((s,f) => s + (f.file_size||0), 0);
+    const sizeStr = totalSize < 1048576 ? (totalSize/1024).toFixed(1)+' KB' : (totalSize/1048576).toFixed(1)+' MB';
     div.innerHTML = `<div style="background:var(--success-bg);border:1px solid var(--success-border);border-radius:var(--radius-lg);padding:14px;margin-top:12px">
-      ✅ <strong>${file.name}</strong> 上传成功（${sizeStr}）<br>
-      <button class="btn btn-sm btn-primary" style="margin-top:8px" onclick="closeModal();loadTemplates();">完成</button></div>`;
+      ✅ 成功上传 <strong>${result.count}</strong> 个文件（${sizeStr}）<br>
+      ${result.files.map(f => `<div style="font-size:12px;color:var(--text-secondary);margin-top:2px">· ${f.title} (${(f.file_size/1024).toFixed(1)} KB)</div>`).join('')}
+      <button class="btn btn-sm btn-primary" style="margin-top:10px" onclick="closeModal();loadTemplates();">完成</button></div>`;
   }
 }
 

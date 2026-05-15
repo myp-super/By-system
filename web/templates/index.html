@@ -11,6 +11,7 @@
   <div class="sidebar-logo" onclick="navigateTo('dashboard')" style="cursor:pointer">🎓 <span>保研管理</span></div>
   <nav class="sidebar-nav" id="sidebarNav">
     <a class="nav-item active" data-page="dashboard" href="javascript:void(0)"><span class="nav-icon">&#9679;</span>首页仪表盘</a>
+    <a class="nav-item" data-page="notices" href="javascript:void(0)"><span class="nav-icon">&#9679;</span>保研通知</a>
     <a class="nav-item" data-page="programs" href="javascript:void(0)"><span class="nav-icon">&#9679;</span>硕士专业查询</a>
     <a class="nav-item" data-page="kanban" href="javascript:void(0)"><span class="nav-icon">&#9679;</span>申请进度看板</a>
     <a class="nav-item" data-page="projects" href="javascript:void(0)"><span class="nav-icon">&#9679;</span>我的项目库</a>
@@ -30,6 +31,12 @@
     <div class="stats-grid" id="statCards"></div>
     <div class="dashboard-row"><div class="card"><h3 style="font-size:14px;font-weight:600;margin-bottom:12px">⏰ 即将截止（3天内）</h3><div id="deadlineList"></div></div><div class="card"><h3 style="font-size:14px;font-weight:600;margin-bottom:12px">✉️ 待跟进导师</h3><div id="followupList"></div></div></div>
     <div class="card"><h3 style="font-size:14px;font-weight:600;margin-bottom:12px">📌 最近项目</h3><div id="recentProjects"></div></div>
+  </div>
+
+  <!-- 保研通知 (embedded) -->
+  <div class="page" id="page-notices">
+    <div class="page-header"><div><div class="page-title">Notices</div><div class="page-subtitle">baoyantongzhi.com — 夏令营 / 预推免实时通知</div></div><a href="https://www.baoyantongzhi.com/notice" target="_blank" class="btn btn-secondary">Open in New Tab</a></div>
+    <div class="iframe-container"><iframe src="https://www.baoyantongzhi.com/notice" title="保研通知"></iframe></div>
   </div>
 
   <!-- Programs -->
@@ -68,9 +75,9 @@
 
   <!-- Templates -->
   <div class="page" id="page-templates">
-    <div class="page-header"><div><div class="page-title">📝 文书模板库</div><div class="page-subtitle">上传文件 · 原格式下载 · 支持 Word / PDF / Excel / TXT</div></div><div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="showTemplateUpload()">📂 上传文件</button><button class="btn btn-secondary" onclick="showTemplateModal()">＋ 新建文本</button></div></div>
+    <div class="page-header"><div><div class="page-title">📝 文书模板库</div><div class="page-subtitle">批量上传 · 批量下载(ZIP) · 原格式存储</div></div><div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="showTemplateUpload()">📂 批量上传</button><button class="btn btn-success" onclick="batchDownload()">📦 批量下载</button><button class="btn btn-secondary" onclick="showTemplateModal()">＋ 新建文本</button></div></div>
     <div class="filter-bar"><select class="select-input" id="templateCategoryFilter" onchange="loadTemplates()"><option value="">全部分类</option><option>个人陈述</option><option>邮件模板</option><option>感谢信</option><option>其他</option></select><input class="search-input" id="templateSearch" placeholder="搜索模板..." oninput="loadTemplates()"></div>
-    <div class="table-container"><table><thead><tr><th style="width:60px"></th><th>文件名</th><th style="width:100px">分类</th><th style="width:100px">大小</th><th style="width:200px">操作</th></tr></thead><tbody id="templateTableBody"></tbody></table></div>
+    <div class="table-container"><table><thead><tr><th style="width:40px"><input type="checkbox" id="selectAllTpl" onchange="toggleAllTpl()" title="全选"></th><th style="width:50px"></th><th>文件名</th><th style="width:100px">分类</th><th style="width:100px">大小</th><th style="width:240px">操作</th></tr></thead><tbody id="templateTableBody"></tbody></table></div>
   </div>
 </main></div>
 
@@ -79,6 +86,14 @@
 
 <!-- Program Detail Modal -->
 <div class="modal-overlay" id="progDetailOverlay"><div class="modal" style="max-width:640px"><div class="modal-header"><h2 id="progDetailTitle"></h2><button class="modal-close" onclick="closeProgDetail()">✕</button></div><div class="modal-body" id="progDetailBody"></div></div></div>
+
+<!-- Preview Modal (fullscreen) -->
+<div class="modal-overlay" id="previewOverlay" style="z-index:2000">
+  <div style="position:absolute;top:16px;right:16px;z-index:2001">
+    <button class="modal-close" style="width:40px;height:40px;font-size:22px;background:#fff" onclick="closePreview()">✕</button>
+  </div>
+  <iframe id="previewIframe" style="width:95vw;height:90vh;border:none;border-radius:12px;background:#fff;box-shadow:var(--shadow-lg)"></iframe>
+</div>
 
 <!-- Generic Modal -->
 <div class="modal-overlay" id="modalOverlay"><div class="modal" id="modalContent"><div class="modal-header"><h2 id="modalTitle"></h2><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-footer" id="modalFooter"></div></div></div>
