@@ -427,5 +427,95 @@ async function saveTemplate(tid) {
 async function deleteTemplate(tid) { if (!confirm('确定删除此文件？')) return; await del(`/templates/${tid}`); toast('已删除','success'); loadTemplates(); }
 function exportData() { window.open(API+'/export','_blank'); }
 
-// Init
-refreshDashboard();
+// ═══ Auth ══════════════════════════════════════════════════════════════
+let authMode = 'login';
+
+async function checkAuth() {
+  const r = await fetch(API+'/auth/me');
+  if (r.status === 200) {
+    const user = await r.json();
+    window._currentUser = user;
+    return true;
+  }
+  window._currentUser = null;
+  return false;
+}
+
+function toggleAuthMode() {
+  authMode = authMode === 'login' ? 'register' : 'login';
+  document.getElementById('authSubtitle').textContent = authMode === 'login' ? '登录你的账号' : '注册新账号';
+  document.getElementById('authBtn').textContent = authMode === 'login' ? '登录' : '注册';
+  document.getElementById('authToggleText').textContent = authMode === 'login' ? '没有账号？' : '已有账号？';
+  document.getElementById('authToggleLink').textContent = authMode === 'login' ? '注册' : '登录';
+  document.getElementById('nicknameGroup').style.display = authMode === 'register' ? 'block' : 'none';
+  document.getElementById('authError').style.display = 'none';
+}
+
+async function handleAuth() {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const errDiv = document.getElementById('authError');
+
+  if (authMode === 'register') {
+    const nickname = document.getElementById('authNickname').value.trim();
+    const r = await fetch(API+'/auth/register', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email, password, nickname})
+    });
+    const d = await r.json();
+    if (r.ok) { authSuccess(d); }
+    else { errDiv.textContent = d.error; errDiv.style.display = 'block'; }
+  } else {
+    const r = await fetch(API+'/auth/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email, password})
+    });
+    const d = await r.json();
+    if (r.ok) { authSuccess(d); }
+    else { errDiv.textContent = d.error; errDiv.style.display = 'block'; }
+  }
+}
+
+function authSuccess(user) {
+  window._currentUser = user;
+  document.getElementById('page-auth').classList.remove('active');
+  document.getElementById('sidebarNav').style.display = '';
+  document.querySelector('.sidebar-footer').textContent = user.nickname || user.email;
+  navigateTo('dashboard');
+}
+
+async function logout() {
+  await fetch(API+'/auth/logout', {method:'POST'});
+  window._currentUser = null;
+  showLoginPage();
+}
+
+function showLoginPage() {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-auth').classList.add('active');
+  document.getElementById('sidebarNav').style.display = 'none';
+  document.querySelector('.sidebar-footer').textContent = 'v5 · Enterprise';
+  document.getElementById('authEmail').value = '';
+  document.getElementById('authPassword').value = '';
+  document.getElementById('authError').style.display = 'none';
+}
+
+// Wrapper for authenticated navigation
+const _origNavigateTo = navigateTo;
+navigateTo = async function(page) {
+  if (page === 'auth') return;
+  const ok = await checkAuth();
+  if (!ok) { showLoginPage(); return; }
+  _origNavigateTo(page);
+};
+
+// Init: check auth on load
+(async function init() {
+  const ok = await checkAuth();
+  if (!ok) {
+    showLoginPage();
+    return;
+  }
+  document.querySelector('.sidebar-footer').textContent = window._currentUser.nickname || window._currentUser.email;
+  refreshDashboard();
+})();

@@ -37,7 +37,8 @@
       "Bash(GIT_EDITOR=true git rebase --continue)",
       "Bash(git stash *)",
       "Bash(git pull *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Skill(superpowers:brainstorming)"
     ]
   }
 }
