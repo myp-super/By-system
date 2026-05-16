@@ -10,10 +10,8 @@ from werkzeug.utils import secure_filename
 if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
-from flask import Flask, render_template, request, jsonify, send_file, session as flask_session
+from flask import Flask, render_template, request, jsonify, send_file
 from flask_cors import CORS
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
 
 from sqlalchemy import create_engine, Column, Integer, String, Text, Date, DateTime, ForeignKey
 from sqlalchemy.orm import Session, sessionmaker, DeclarativeBase, relationship
@@ -26,8 +24,7 @@ app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024
 CORS(app)
 
 # ─── Database ────────────────────────────────────────────────────────────────
-import os as _os
-DB_DIR = Path(_os.environ.get("BAOYAN_DATA_DIR", Path.home() / "baoyan_data"))
+DB_DIR = Path.home() / "baoyan_data"
 DB_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = DB_DIR / "data.db"
 engine = create_engine(f"sqlite:///{DB_PATH}", echo=False, connect_args={"check_same_thread": False})
@@ -37,26 +34,16 @@ class Base(DeclarativeBase): pass
 
 # ─── Models ──────────────────────────────────────────────────────────────────
 
-class User(Base, UserMixin):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    email = Column(String(120), unique=True, nullable=False, default="")
-    password_hash = Column(String(256), nullable=False, default="")
-    nickname = Column(String(50), nullable=False, default="")
-    created_at = Column(DateTime, default=datetime.now)
-
-
 class Project(Base):
     __tablename__ = "projects"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     school = Column(String(100), default=""); college = Column(String(100), default="")
     major = Column(String(100), default=""); degree_type = Column(String(20), default="学硕")
     batch = Column(String(20), default="夏令营"); status = Column(String(20), default="计划中")
-    school_url = Column(String(500), default="")       # 学校官网
-    apply_url = Column(String(500), default="")        # 报名网址
+    school_url = Column(String(500), default=""); apply_url = Column(String(500), default="")
     official_link = Column(String(500), default="")
-    tags = Column(String(200), default=""); notes = Column(Text, default="")
+    tags = Column(String(200), default=""); status = Column(String(20), default="计划中")
+    notes = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.now); updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     materials = relationship("Material", back_populates="project", cascade="all, delete-orphan")
     timelines = relationship("Timeline", back_populates="project", cascade="all, delete-orphan")
@@ -90,7 +77,6 @@ class Interview(Base):
 class Mentor(Base):
     __tablename__ = "mentors"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     name = Column(String(50), default=""); school = Column(String(100), default="")
     research_direction = Column(String(200), default=""); email = Column(String(100), default="")
     first_contact_date = Column(Date, nullable=True); status = Column(String(20), default="未发")
@@ -100,12 +86,11 @@ class Mentor(Base):
 class Template(Base):
     __tablename__ = "templates"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     title = Column(String(200), default=""); category = Column(String(50), default="个人陈述")
     content = Column(Text, default="")
-    file_path = Column(String(500), default="")
-    original_filename = Column(String(300), default="")
-    file_size = Column(Integer, default=0)
+    file_path = Column(String(500), default="")       # stored file path on disk
+    original_filename = Column(String(300), default="")  # original upload filename
+    file_size = Column(Integer, default=0)            # file size in bytes
     created_at = Column(DateTime, default=datetime.now)
 
 class SummerCamp(Base):
@@ -135,22 +120,6 @@ class GraduateProgram(Base):
 
 
 Base.metadata.create_all(bind=engine)
-
-# ─── Flask-Login Setup ──────────────────────────────────────────────────
-login_manager = LoginManager()
-login_manager.init_app(app)
-
-@login_manager.user_loader
-def load_user(user_id):
-    session = SessionLocal()
-    try:
-        return session.query(User).filter_by(id=int(user_id)).first()
-    finally:
-        session.close()
-
-@login_manager.unauthorized_handler
-def unauthorized():
-    return jsonify({"error": "请先登录"}), 401
 
 
 # ─── Seed real data on first run ──────────────────────────────────────────
@@ -249,69 +218,6 @@ if not ALL_SCHOOLS:
 # University Search
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# ═══ Auth Routes ══════════════════════════════════════════════════════════
-
-@app.route('/api/auth/register', methods=['POST'])
-def register():
-    data = request.json
-    email = data.get('email', '').strip().lower()
-    password = data.get('password', '').strip()
-    nickname = data.get('nickname', '').strip() or email.split('@')[0]
-
-    if not email or '@' not in email:
-        return jsonify({"error": "请输入有效邮箱"}), 400
-    if len(password) < 6:
-        return jsonify({"error": "密码至少6位"}), 400
-
-    session = SessionLocal()
-    try:
-        existing = session.query(User).filter_by(email=email).first()
-        if existing:
-            session.close()
-            return jsonify({"error": "该邮箱已注册"}), 409
-
-        user = User(
-            email=email,
-            password_hash=generate_password_hash(password),
-            nickname=nickname,
-        )
-        session.add(user)
-        session.commit()
-        login_user(user, remember=True)
-        return jsonify({"id": user.id, "email": user.email, "nickname": user.nickname})
-    finally:
-        session.close()
-
-@app.route('/api/auth/login', methods=['POST'])
-def login():
-    data = request.json
-    email = data.get('email', '').strip().lower()
-    password = data.get('password', '').strip()
-
-    session = SessionLocal()
-    try:
-        user = session.query(User).filter_by(email=email).first()
-        if not user or not check_password_hash(user.password_hash, password):
-            return jsonify({"error": "邮箱或密码错误"}), 401
-        login_user(user, remember=True)
-        return jsonify({"id": user.id, "email": user.email, "nickname": user.nickname})
-    finally:
-        session.close()
-
-@app.route('/api/auth/logout', methods=['POST'])
-def logout():
-    logout_user()
-    return jsonify({"ok": True})
-
-@app.route('/api/auth/me')
-def me():
-    if current_user.is_authenticated:
-        return jsonify({"id": current_user.id, "email": current_user.email,
-                        "nickname": current_user.nickname})
-    return jsonify({"id": None}), 401
-
-# ═══ University Search ══════════════════════════════════════════════════════
-
 @app.route('/api/universities/search')
 def search_universities():
     q = request.args.get('q','').strip().lower()
@@ -379,7 +285,7 @@ def dashboard():
     session = SessionLocal()
     try:
         today = date.today()
-        projects = session.query(Project).filter_by(user_id=current_user.id).all()
+        projects = session.query(Project).all()
         total = len(projects)
         status_counts = {}
         for p in projects: status_counts[p.status] = status_counts.get(p.status,0) + 1
@@ -435,11 +341,10 @@ def _proj_dict(p):
                 timeline_count=len(p.timelines), interview_count=len(p.interviews))
 
 @app.route('/api/projects')
-@login_required
 def get_projects():
     session = SessionLocal()
     try:
-        q = session.query(Project).filter_by(user_id=current_user.id)
+        q = session.query(Project)
         kw = request.args.get('q','').strip()
         batch = request.args.get('batch','').strip()
         status = request.args.get('status','').strip()
@@ -468,12 +373,11 @@ def get_project(pid):
     finally: session.close()
 
 @app.route('/api/projects', methods=['POST'])
-@login_required
 def create_project():
     data = request.json
     session = SessionLocal()
     try:
-        p = Project(user_id=current_user.id,school=data.get('school',''),college=data.get('college',''),
+        p = Project(school=data.get('school',''),college=data.get('college',''),
                     major=data.get('major',''),degree_type=data.get('degree_type','学硕'),
                     batch=data.get('batch','夏令营'),status=data.get('status','计划中'),
                     school_url=data.get('school_url',''),apply_url=data.get('apply_url',''),
@@ -495,8 +399,7 @@ def update_project(pid):
     try:
         p = session.query(Project).filter_by(id=pid).first()
         if not p: return jsonify(dict(error="Not found")),404
-        for f in ['school','college','major','degree_type','batch','status',
-                  'school_url','apply_url','official_link','tags','notes']:
+        for f in ['school','college','major','degree_type','batch','status','school_url','apply_url','official_link','tags','notes']:
             if f in data: setattr(p,f,data[f])
         p.updated_at = datetime.now(); session.commit()
         return jsonify(_proj_dict(p))
@@ -642,7 +545,7 @@ def delete_interview(iid):
 def get_mentors():
     session = SessionLocal()
     status = request.args.get('status','').strip()
-    q = session.query(Mentor).filter_by(user_id=current_user.id)
+    q = session.query(Mentor)
     if status == '__followup__':
         today = date.today()
         q = q.filter(Mentor.next_followup_date <= today, Mentor.status.in_(["已发","已回复"]))
@@ -660,7 +563,7 @@ def create_mentor():
     data = request.json
     session = SessionLocal()
     fc = data.get('first_contact_date'); nf = data.get('next_followup_date')
-    m = Mentor(user_id=current_user.id, name=data.get('name',''),school=data.get('school',''),
+    m = Mentor(name=data.get('name',''),school=data.get('school',''),
                research_direction=data.get('research_direction',''),email=data.get('email',''),
                first_contact_date=date.fromisoformat(fc) if fc else None,
                status=data.get('status','未发'),reply_summary=data.get('reply_summary',''),
@@ -697,7 +600,7 @@ def get_templates():
     session = SessionLocal()
     cat = request.args.get('category','').strip()
     kw = request.args.get('q','').strip().lower()
-    q = session.query(Template).filter_by(user_id=current_user.id)
+    q = session.query(Template)
     if cat: q = q.filter(Template.category==cat)
     templates = q.order_by(Template.created_at.desc()).all()
     session.close()
@@ -714,7 +617,7 @@ def get_templates():
 def create_template():
     data = request.json
     session = SessionLocal()
-    t = Template(user_id=current_user.id, title=data.get('title',''),category=data.get('category','个人陈述'),content=data.get('content',''))
+    t = Template(title=data.get('title',''),category=data.get('category','个人陈述'),content=data.get('content',''))
     session.add(t); session.commit()
     r = dict(id=t.id,title=t.title); session.close()
     return jsonify(r),201
@@ -806,7 +709,7 @@ def upload_template_file():
             with open(stored_path, 'wb') as f:
                 f.write(file_bytes)
 
-            t = Template(user_id=current_user.id, 
+            t = Template(
                 title=file.filename,
                 category=request.form.get('category', '其他'),
                 content='',
@@ -1237,7 +1140,7 @@ def export_excel():
     try:
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            projs = session.query(Project).filter_by(user_id=current_user.id).all()
+            projs = session.query(Project).all()
             if projs:
                 pd.DataFrame([_proj_dict(p) for p in projs]).to_excel(writer, sheet_name='项目', index=False)
 
